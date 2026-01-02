@@ -1,8 +1,5 @@
 # Projeto 2: Otimização de Rotas para Distribuição de Medicamentos com Algoritmos Genéticos
 
-**Autor:** Aluno FIAP (com assistência de Manus AI)
-**Data:** 27 de Dezembro de 2025
-**Disciplina:** Inteligência Artificial e Data-Driven
 
 ---
 
