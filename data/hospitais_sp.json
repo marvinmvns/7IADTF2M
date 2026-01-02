@@ -1,0 +1,858 @@
+{
+  "depot": {
+    "id": 0,
+    "name": "Farmácia Central - Sé",
+    "city": "São Paulo",
+    "latitude": -23.5505,
+    "longitude": -46.6333,
+    "type": "deposito",
+    "priority": 0,
+    "demand": 0.0
+  },
+  "capital": [
+    {
+      "id": 1,
+      "name": "Complexo Hospitalar Cotoxó",
+      "city": "São Paulo",
+      "latitude": -23.536244,
+      "longitude": -46.68827,
+      "type": "indefinido",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 2,
+      "name": "Complexo Hospitalar Edmundo Vasconcelos",
+      "city": "São Paulo",
+      "latitude": -23.595624,
+      "longitude": -46.652258,
+      "type": "indefinido",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 3,
+      "name": "Conjunto Hospitalar do Mandaqui",
+      "city": "São Paulo",
+      "latitude": -23.484929,
+      "longitude": -46.63136,
+      "type": "indefinido",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 4,
+      "name": "Hospital Albert Sabin",
+      "city": "São Paulo",
+      "latitude": -23.525751,
+      "longitude": -46.711653,
+      "type": "indefinido",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 5,
+      "name": "Hospital Alemão Oswald Cruz",
+      "city": "São Paulo",
+      "latitude": -23.554138,
+      "longitude": -46.604289,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 6,
+      "name": "Hospital Alemão Oswaldo Cruz",
+      "city": "São Paulo",
+      "latitude": -23.569286,
+      "longitude": -46.643004,
+      "type": "privado",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 7,
+      "name": "Hospital Alvorada Moema",
+      "city": "São Paulo",
+      "latitude": -23.60144,
+      "longitude": -46.661251,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 8,
+      "name": "Hospital Avicena",
+      "city": "São Paulo",
+      "latitude": -23.544033,
+      "longitude": -46.585624,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 9,
+      "name": "Hospital Beneficência Portuguesa",
+      "city": "São Paulo",
+      "latitude": -23.567385,
+      "longitude": -46.641539,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 10,
+      "name": "Hospital Casa Verde",
+      "city": "São Paulo",
+      "latitude": -23.506301,
+      "longitude": -46.661382,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 11,
+      "name": "Hospital CEMA",
+      "city": "São Paulo",
+      "latitude": -23.544989,
+      "longitude": -46.590753,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 12,
+      "name": "Hospital Central de Guaianases",
+      "city": "São Paulo",
+      "latitude": -23.537919,
+      "longitude": -46.403161,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    }
+  ],
+  "metropolitana": [
+    {
+      "id": 13,
+      "name": "Hospital Israelita Albert Einstein",
+      "city": "Barueri",
+      "latitude": -23.50017,
+      "longitude": -46.858036,
+      "type": "indefinido",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 14,
+      "name": "Hospital São Luiz Alphaville",
+      "city": "Barueri",
+      "latitude": -23.502594,
+      "longitude": -46.837198,
+      "type": "privado",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 15,
+      "name": "Pronto Socorro do Mutinga",
+      "city": "Barueri",
+      "latitude": -23.500926,
+      "longitude": -46.814666,
+      "type": "indefinido",
+      "priority": 1,
+      "demand": 45.0
+    },
+    {
+      "id": 16,
+      "name": "Pronto Socorro Engenho Novo",
+      "city": "Barueri",
+      "latitude": -23.487846,
+      "longitude": -46.892278,
+      "type": "privado",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 17,
+      "name": "Pronto Socorro Infantil",
+      "city": "Barueri",
+      "latitude": -23.51097,
+      "longitude": -46.871618,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 18,
+      "name": "Pronto-Socorro e Maternidade Nair Fonseca Leitão Arantes",
+      "city": "Barueri",
+      "latitude": -23.511372,
+      "longitude": -46.872145,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 19,
+      "name": "Hospital Espírita Fabiano de Cristo",
+      "city": "Caieiras",
+      "latitude": -23.387318,
+      "longitude": -46.716076,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 20,
+      "name": "Hospital Maternidade Vitalina Francisca Ventura",
+      "city": "Caieiras",
+      "latitude": -23.365883,
+      "longitude": -46.749631,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 21,
+      "name": "Hospital Mista Rosa Santa Pasin Aguiar",
+      "city": "Caieiras",
+      "latitude": -23.36665,
+      "longitude": -46.75039,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 22,
+      "name": "Pronto Socorro Adulto e Infantil",
+      "city": "Caieiras",
+      "latitude": -23.392805,
+      "longitude": -46.713238,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 23,
+      "name": "Hospital Geral de Carapicuíba Doutor Francisco de Moura Coutinho Filho",
+      "city": "Carapicuíba",
+      "latitude": -23.534124,
+      "longitude": -46.830304,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 24,
+      "name": "Unidade de Pronto Atendimento Cohab II",
+      "city": "Carapicuíba",
+      "latitude": -23.530183,
+      "longitude": -46.827719,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    }
+  ],
+  "interior": [
+    {
+      "id": 25,
+      "name": "Hospital Municipal Doutor Waldemar Tebaldi",
+      "city": "Americana",
+      "latitude": -22.74198,
+      "longitude": -47.30885,
+      "type": "privado",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 26,
+      "name": "Hospital São Francisco",
+      "city": "Americana",
+      "latitude": -22.746665,
+      "longitude": -47.329389,
+      "type": "privado",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 27,
+      "name": "Santa Casa de Misericordia de Bragança Paulista",
+      "city": "Bragança Paulista",
+      "latitude": -22.951229,
+      "longitude": -46.54312,
+      "type": "público",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 28,
+      "name": "Complexo Hospitalar Prefeito Edivaldo Orsi",
+      "city": "Campinas",
+      "latitude": -22.962725,
+      "longitude": -47.135519,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 29,
+      "name": "Hospital de Amor",
+      "city": "Campinas",
+      "latitude": -22.917487,
+      "longitude": -47.072792,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 30,
+      "name": "Hospital de Clínicas da UNICAMP",
+      "city": "Campinas",
+      "latitude": -22.826237,
+      "longitude": -47.064361,
+      "type": "indefinido",
+      "priority": 2,
+      "demand": 28.0
+    },
+    {
+      "id": 31,
+      "name": "Hospital e Maternidade Santa Tereza",
+      "city": "Campinas",
+      "latitude": -22.903722,
+      "longitude": -47.060855,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 32,
+      "name": "Hospital e Maternidade São Luiz Campinas",
+      "city": "Campinas",
+      "latitude": -22.90146,
+      "longitude": -47.071156,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 33,
+      "name": "Hospital Municipal Doutor Mario Gatti",
+      "city": "Campinas",
+      "latitude": -22.916352,
+      "longitude": -47.068339,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 34,
+      "name": "Hospital PUC-Campinas Celso Pierro",
+      "city": "Campinas",
+      "latitude": -22.9202,
+      "longitude": -47.119914,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 35,
+      "name": "Maternidade de Campinas",
+      "city": "Campinas",
+      "latitude": -22.899217,
+      "longitude": -47.063405,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 36,
+      "name": "Pronto Atendimento de Saúde Vila Padre Anchieta",
+      "city": "Campinas",
+      "latitude": -22.863411,
+      "longitude": -47.153261,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 37,
+      "name": "Pronto Socorro Padre Ancheita",
+      "city": "Campinas",
+      "latitude": -22.863418,
+      "longitude": -47.153263,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 38,
+      "name": "Hospital Ana Costa",
+      "city": "Cubatão",
+      "latitude": -23.879795,
+      "longitude": -46.421379,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 39,
+      "name": "UPA Doutor Mário Ruivo",
+      "city": "Cubatão",
+      "latitude": -23.924637,
+      "longitude": -46.416558,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 40,
+      "name": "UPA Enseada",
+      "city": "Guarujá",
+      "latitude": -23.977772,
+      "longitude": -46.22115,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 41,
+      "name": "Santa Casa de Misericórdia",
+      "city": "Jacareí",
+      "latitude": -23.307512,
+      "longitude": -45.970388,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 42,
+      "name": "Hospital da Criança GRENDACC",
+      "city": "Jundiaí",
+      "latitude": -23.161533,
+      "longitude": -46.911328,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 43,
+      "name": "Hospital de Caridade São Vicente de Paulo",
+      "city": "Jundiaí",
+      "latitude": -23.183967,
+      "longitude": -46.88985,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 44,
+      "name": "Hospital e Maternidade Santa Elisa",
+      "city": "Jundiaí",
+      "latitude": -23.182861,
+      "longitude": -46.892353,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 45,
+      "name": "Hospital de Misericórdia de Altinópolis",
+      "city": "Altinópolis",
+      "latitude": -21.026891,
+      "longitude": -47.375917,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 46,
+      "name": "UPA Andradina",
+      "city": "Andradina",
+      "latitude": -20.903192,
+      "longitude": -51.370955,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 47,
+      "name": "Santa Casa",
+      "city": "Angatuba",
+      "latitude": -23.492388,
+      "longitude": -48.414718,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 48,
+      "name": "Pronto Socorro",
+      "city": "Aparecida",
+      "latitude": -22.84075,
+      "longitude": -45.227339,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 49,
+      "name": "Santa Casa de Misericórdia de Aparecida",
+      "city": "Aparecida",
+      "latitude": -22.840648,
+      "longitude": -45.226689,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 50,
+      "name": "Hospital Canasol",
+      "city": "Araraquara",
+      "latitude": -21.810254,
+      "longitude": -48.158019,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 51,
+      "name": "Maternidade Gota de Leite",
+      "city": "Araraquara",
+      "latitude": -21.793674,
+      "longitude": -48.178709,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 52,
+      "name": "Santa Casa de Araraquara",
+      "city": "Araraquara",
+      "latitude": -21.789496,
+      "longitude": -48.179867,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 53,
+      "name": "Unidade de Pronto Atendimento Doutor Antônio Alonso Martinez",
+      "city": "Araraquara",
+      "latitude": -21.785914,
+      "longitude": -48.159527,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 54,
+      "name": "UPA Valle Verde",
+      "city": "Araraquara",
+      "latitude": -21.72465,
+      "longitude": -48.157938,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 55,
+      "name": "Hospital Unimed",
+      "city": "Araras",
+      "latitude": -22.366202,
+      "longitude": -47.365195,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 56,
+      "name": "Hospital Unimed Araçatuba",
+      "city": "Araçatuba",
+      "latitude": -21.229862,
+      "longitude": -50.415658,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 57,
+      "name": "Pronto-socorro Aida Vanzo Dolce",
+      "city": "Araçatuba",
+      "latitude": -21.20106,
+      "longitude": -50.437441,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 58,
+      "name": "Santa Casa de Misericórdia \"Doutor Oswaldo Siqueira Lyra\"",
+      "city": "Auriflama",
+      "latitude": -20.685156,
+      "longitude": -50.554869,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 59,
+      "name": "Hospital de Amor",
+      "city": "Barretos",
+      "latitude": -20.581016,
+      "longitude": -48.568547,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 60,
+      "name": "Hospital de Câncer de Barretos",
+      "city": "Barretos",
+      "latitude": -20.581312,
+      "longitude": -48.568538,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 61,
+      "name": "Hospital de Câncer Infantojuvenil",
+      "city": "Barretos",
+      "latitude": -20.584079,
+      "longitude": -48.566479,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 62,
+      "name": "Hospital São Jorge",
+      "city": "Barretos",
+      "latitude": -20.555545,
+      "longitude": -48.5785,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 63,
+      "name": "Hospital São Judas Tadeu",
+      "city": "Barretos",
+      "latitude": -20.554299,
+      "longitude": -48.57143,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 64,
+      "name": "Santa Casa de Misericórdia",
+      "city": "Barretos",
+      "latitude": -20.559221,
+      "longitude": -48.573881,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 65,
+      "name": "UPA - Unidade de Pronto Atendimento",
+      "city": "Batatais",
+      "latitude": -20.904645,
+      "longitude": -47.588108,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 66,
+      "name": "Hospital de Base de Bauru",
+      "city": "Bauru",
+      "latitude": -22.330273,
+      "longitude": -49.076926,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 67,
+      "name": "Hospital Estadual Bauru Doutor Arnaldo Prado Curvêllo",
+      "city": "Bauru",
+      "latitude": -22.339294,
+      "longitude": -49.028211,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 68,
+      "name": "Hospital Unimed Bauru",
+      "city": "Bauru",
+      "latitude": -22.321898,
+      "longitude": -48.976126,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 69,
+      "name": "Pronto Socorro Municipal Doutor Alceu Lot",
+      "city": "Birigui",
+      "latitude": -21.281511,
+      "longitude": -50.335294,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 70,
+      "name": "Santa Casa de Misericórdia",
+      "city": "Birigui",
+      "latitude": -21.281907,
+      "longitude": -50.335807,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 71,
+      "name": "Hospital Estadual de Botucatu UNESP",
+      "city": "Botucatu",
+      "latitude": -22.929163,
+      "longitude": -48.461677,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 72,
+      "name": "Hospital Unimed Botucatu",
+      "city": "Botucatu",
+      "latitude": -22.887612,
+      "longitude": -48.446228,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 73,
+      "name": "Pronto Socorro Municipal",
+      "city": "Botucatu",
+      "latitude": -22.89981,
+      "longitude": -48.447226,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 74,
+      "name": "Hospital Santa Teresinha",
+      "city": "Brotas",
+      "latitude": -22.286146,
+      "longitude": -48.122301,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 75,
+      "name": "Pronto Socorro",
+      "city": "Cajuru",
+      "latitude": -21.274427,
+      "longitude": -47.305728,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 76,
+      "name": "Irmandade Santa Casa Leonor Mendes de Barros de Cardoso",
+      "city": "Cardoso",
+      "latitude": -20.07717,
+      "longitude": -49.910827,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 77,
+      "name": "Santa Casa de Misericórdia",
+      "city": "Casa Branca",
+      "latitude": -21.776243,
+      "longitude": -47.085733,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 78,
+      "name": "Hospital Emílio Carlos",
+      "city": "Catanduva",
+      "latitude": -21.149086,
+      "longitude": -48.958109,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 79,
+      "name": "Hospital Padre Albino",
+      "city": "Catanduva",
+      "latitude": -21.141092,
+      "longitude": -48.975893,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 80,
+      "name": "Hospital São Domingos",
+      "city": "Catanduva",
+      "latitude": -21.155542,
+      "longitude": -48.985301,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 81,
+      "name": "Hospital Unimed São Domingos",
+      "city": "Catanduva",
+      "latitude": -21.156254,
+      "longitude": -48.985335,
+      "type": "privado",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 82,
+      "name": "UPA Catanduva",
+      "city": "Catanduva",
+      "latitude": -21.14829,
+      "longitude": -48.949464,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 83,
+      "name": "Hospital e Maternidade Policlin",
+      "city": "Caçapava",
+      "latitude": -23.104802,
+      "longitude": -45.708588,
+      "type": "indefinido",
+      "priority": 3,
+      "demand": 16.0
+    },
+    {
+      "id": 84,
+      "name": "Santa Casa de Misericórdia de Cerqueira César",
+      "city": "Cerqueira César",
+      "latitude": -23.039442,
+      "longitude": -49.161808,
+      "type": "público",
+      "priority": 3,
+      "demand": 16.0
+    }
+  ]
+}

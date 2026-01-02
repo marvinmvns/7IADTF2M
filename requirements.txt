@@ -1,0 +1,17 @@
+# ==============================================================================
+# Requisitos do Projeto 2 - Otimização de Rotas
+# ==============================================================================
+
+# Bibliotecas principais
+numpy>=1.21.0
+matplotlib>=3.5.0
+
+# Visualização interativa
+pygame>=2.1.0
+pygame_gui>=0.6.9
+
+# Mapas interativos
+folium>=0.14.0
+
+# Utilitários
+dataclasses; python_version < "3.7"
