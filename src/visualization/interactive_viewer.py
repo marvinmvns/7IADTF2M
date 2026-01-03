@@ -1043,7 +1043,7 @@ class InteractiveViewer:
 
         # Título
         title = self.fonts['title'].render(
-            "Saudelog - Inteligência em Distribuição",
+            "Saúdelog - Inteligência em Distribuição",
             True, SOFT_BLACK
         )
         self.screen.blit(title, (x_offset, text_y_start))

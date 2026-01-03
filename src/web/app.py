@@ -16,7 +16,7 @@ from src.web.components.styles import apply_custom_styles
 
 # Config
 st.set_page_config(
-    page_title="Saudelog - Otimização Logística",
+    page_title="Saúdelog - Otimização Logística",
     page_icon="🚑",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -61,13 +61,13 @@ with col_nav1:
             f"""
             <div style="display: flex; align-items: center; gap: 15px; margin-top: -15px;">
                 <img src="data:image/png;base64,{logo_b64}" style="height: 90px; width: auto;">
-                <h1 style="margin: 0; padding: 0; color: #007BFF; font-family: 'Inter', sans-serif; font-size: 3rem; line-height: 1.2;">Saudelog</h1>
+                <h1 style="margin: 0; padding: 0; color: #007BFF; font-family: 'Inter', sans-serif; font-size: 3rem; line-height: 1.2;">Saúdelog</h1>
             </div>
             """, 
             unsafe_allow_html=True
         )
     else:
-        st.markdown("<h1 style='color: #007BFF;'>Saudelog</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #007BFF;'>Saúdelog</h1>", unsafe_allow_html=True)
 
     # Estilos globais para botões de navegação
     st.markdown(
@@ -123,14 +123,20 @@ with col_nav2:
 
 # Configuração da API - busca da própria API
 def get_api_config():
-    """Obtém configurações da API, com fallback para localhost."""
+    """Obtém configurações da API, com prioridade para variável de ambiente."""
+    # 1. Variável de Ambiente (Docker/Cloud)
+    env_url = os.getenv("API_URL")
+    if env_url:
+        return env_url
+
+    # 2. Tentativa de conexão local (Fallback)
     try:
-        # Tenta buscar da API primeiro
         response = requests.get("http://localhost:8000/config/options", timeout=1)
         if response.status_code == 200:
             return response.json().get("api_url", "http://localhost:8000")
     except:
         pass
+        
     return "http://localhost:8000"
 
 API_URL = get_api_config()
@@ -737,8 +743,14 @@ elif page == "Nova Execução":
     col_act1, col_act2, col_spacer = st.columns([1, 1.2, 3])
     
     with col_act1:
-        if st.button("🎮 Executar Visualmente (Pygame)"):
-            run_pygame_visual(config)
+        # Verifica se está rodando no Docker
+        is_docker = os.getenv("SERVICE_TYPE") is not None
+        
+        if is_docker:
+            st.warning("⚠️ Visualização indisponível no Docker (apenas local)")
+        else:
+            if st.button("🎮 Executar Visualmente (Pygame)"):
+                run_pygame_visual(config)
             
     with col_act2:
         if st.button("⚡ Executar em Background (API)"):
@@ -1796,83 +1808,145 @@ elif page == "⚙️":
     
     from src.database.database import get_setting, set_setting
     
-    def load_llm_config():
-        """Carrega config do banco de dados"""
-        return get_setting('llm_config', {
-            'provider': 'ollama',
-            'api_key': '',
-            'base_url': 'http://localhost:11434',
-            'model': ''
-        })
+    # --- Gerenciamento de Configurações por Provider ---
     
-    def save_llm_config(config):
-        """Salva config no banco de dados"""
-        set_setting('llm_config', config)
-    
-    # Carrega config do banco na primeira vez
-    if 'llm_config' not in st.session_state:
-        st.session_state.llm_config = load_llm_config()
-    
-    # Seleção de provider
-    providers_list = ["ollama", "chatmock", "llamacpp", "chatgpt", "openrouter"]
-    current_provider = st.session_state.llm_config.get('provider', 'ollama')
-    provider_index = providers_list.index(current_provider) if current_provider in providers_list else 0
-    
-    provider = st.selectbox("🔌 Provider", providers_list, index=provider_index)
-    
-    # Campos dependendo do provider
-    if provider in ["ollama", "llamacpp", "chatmock"]:
-        default_urls = {
-            "ollama": "http://localhost:11434",
-            "llamacpp": "http://localhost:8080",
-            "chatmock": "http://127.0.0.1:8000"
+    def get_default_provider_configs():
+        """Retorna configurações padrão solicitadas"""
+        return {
+            "ollama": {
+                "base_url": "http://ga-vrp-ollama:11434",
+                "model": "gemma3:latest",
+                "api_key": ""
+            },
+            "chatmock": {
+                "base_url": "http://192.168.31.29:8000",
+                "model": "gpt-5.1-codex-max",
+                "api_key": ""
+            },
+            "llamacpp": {
+                "base_url": "http://localhost:8080",
+                "model": "default",
+                "api_key": ""
+            },
+            "chatgpt": {
+                "base_url": "",
+                "model": "gpt-4o-mini",
+                "api_key": ""
+            },
+            "openrouter": {
+                "base_url": "",
+                "model": "openai/gpt-4o-mini",
+                "api_key": ""
+            }
         }
-        base_url = st.text_input("🌐 URL Base", value=st.session_state.llm_config.get('base_url', default_urls.get(provider)))
+
+    # Carrega configurações salvas de TODOS os providers (Registry)
+    # Se não existir, inicia com os defaults
+    saved_all_configs = get_setting('llm_all_configs', {})
+    default_configs = get_default_provider_configs()
+    
+    # Mescla salvos com defaults (para garantir que novos providers tenham config)
+    all_configs = {**default_configs, **saved_all_configs}
+    
+    # Carrega qual é o provider ATIVO atualmente
+    active_config = get_setting('llm_config', {})
+    current_active_provider = active_config.get('provider', 'ollama')
+
+    # --- Interface ---
+
+    # Seleção de Provider
+    providers_list = ["ollama", "chatmock", "llamacpp", "chatgpt", "openrouter"]
+    if current_active_provider not in providers_list:
+        current_active_provider = "ollama"
+        
+    selected_provider = st.selectbox(
+        "🔌 Provider", 
+        providers_list, 
+        index=providers_list.index(current_active_provider)
+    )
+    
+    # Recupera config específica do provider selecionado
+    provider_config = all_configs.get(selected_provider, {})
+    
+    # -- Campos do Formulário --
+    # Usamos key dinâmica para forçar atualização dos campos ao trocar o provider
+    
+    if selected_provider in ["ollama", "llamacpp", "chatmock"]:
+        base_url = st.text_input(
+            "🌐 URL Base", 
+            value=provider_config.get('base_url', ''),
+            key=f"url_{selected_provider}"
+        )
         api_key = ""
     else:
-        api_key = st.text_input("🔑 API Key", type="password", value=st.session_state.llm_config.get('api_key', ''))
+        api_key = st.text_input(
+            "🔑 API Key", 
+            type="password", 
+            value=provider_config.get('api_key', ''),
+            key=f"key_{selected_provider}"
+        )
         base_url = ""
-    
-    # Botão para carregar modelos
+        
+    # Botão Carregar Modelos
     col1, col2 = st.columns([1, 3])
     with col1:
-        load_models = st.button("🔄 Carregar Modelos")
+        load_models = st.button("🔄 Carregar Modelos", key=f"load_{selected_provider}")
     
-    models_list = []
     if load_models:
         try:
             from src.llm.adapters import get_adapter
-            if provider in ["ollama", "llamacpp", "chatmock"]:
-                adapter = get_adapter(provider, base_url=base_url)
+            if selected_provider in ["ollama", "llamacpp", "chatmock"]:
+                adapter = get_adapter(selected_provider, base_url=base_url)
             else:
-                adapter = get_adapter(provider, api_key=api_key)
-            models_list = adapter.list_models()
-            st.session_state.available_models = models_list
-            if models_list:
-                st.success(f"✅ {len(models_list)} modelos encontrados!")
+                adapter = get_adapter(selected_provider, api_key=api_key)
+            
+            models = adapter.list_models()
+            st.session_state[f'models_{selected_provider}'] = models
+            if models:
+                st.success(f"✅ {len(models)} modelos encontrados!")
             else:
-                st.warning("Nenhum modelo encontrado. Verifique a conexão.")
+                st.warning("Nenhum modelo encontrado.")
         except Exception as e:
             st.error(f"Erro ao conectar: {e}")
+
+    # Seleção de Modelo
+    available_models = st.session_state.get(f'models_{selected_provider}', [])
+    current_model_value = provider_config.get('model', '')
     
-    # Seletor de modelo
-    available = st.session_state.get('available_models', [])
-    if available:
-        model = st.selectbox("🤖 Modelo", options=available)
+    if available_models:
+        # Tenta selecionar o modelo que já estava salvo
+        idx = 0
+        if current_model_value in available_models:
+            idx = available_models.index(current_model_value)
+        model = st.selectbox("🤖 Modelo", options=available_models, index=idx, key=f"model_{selected_provider}")
     else:
-        model = st.text_input("🤖 Modelo (digite manualmente)", value=st.session_state.llm_config.get('model', ''))
-    
-    # Salvar configuração
-    if st.button("💾 Salvar Configuração", type="primary"):
-        config = {
-            'provider': provider,
-            'api_key': api_key,
-            'base_url': base_url,
-            'model': model
+        model = st.text_input("🤖 Modelo (manual)", value=current_model_value, key=f"model_manual_{selected_provider}")
+
+    # Botão Salvar
+    if st.button("💾 Salvar & Ativar Configuração", type="primary"):
+        # 1. Atualiza o registro do provider atual
+        all_configs[selected_provider] = {
+            "base_url": base_url,
+            "api_key": api_key,
+            "model": model
         }
-        st.session_state.llm_config = config
-        save_llm_config(config)
-        st.success("✅ Configuração salva no banco de dados!")
+        
+        # 2. Define como configuração ativa (compatibilidade com sistema)
+        new_active_config = {
+            "provider": selected_provider,
+            "base_url": base_url,
+            "api_key": api_key,
+            "model": model
+        }
+        
+        # 3. Persiste no Banco de Dados
+        set_setting('llm_all_configs', all_configs)  # Salva o "banco" de configs
+        set_setting('llm_config', new_active_config) # Salva a config ativa
+        
+        # Atualiza Session State
+        st.session_state.llm_config = new_active_config
+        
+        st.success(f"✅ Configuração de **{selected_provider}** salva e ativada!")
         st.balloons()
     
     st.divider()
@@ -1891,9 +1965,7 @@ elif page == "⚙️":
                     headers={"Authorization": "Bearer key", "Content-Type": "application/json"},
                     json={
                         "model": model, 
-                        "messages": [{"role": "user", "content": "Return JSON: {\"test\": 1}"}],
-                        "reasoning_summary": "none",
-                        "reasoning_effort": "low"
+                        "messages": [{"role": "user", "content": "Return JSON: {\"test\": 1}"}]
                     },
                     timeout=120
                 )

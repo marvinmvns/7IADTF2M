@@ -24,7 +24,7 @@ services:
       - ga-vrp-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,6 +42,7 @@ services:
     environment:
       - SERVICE_TYPE=web
       - PYTHONUNBUFFERED=1
+      - API_URL=http://api:8000
     ports:
       - "8501:8501"
     volumes:
@@ -76,7 +77,7 @@ services:
       - "com.fiap.service=ollama"
       - "com.fiap.description=Ollama LLM Server with Gemma3 (CPU mode)"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/" ]
       interval: 30s
       timeout: 10s
       retries: 3

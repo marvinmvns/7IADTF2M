@@ -459,10 +459,7 @@ class ChatMockAdapter(LLMAdapter):
                     "model": self.model,
                     "messages": [{"role": "user", "content": self._build_prompt(context)}],
                     "max_tokens": 300,
-                    "temperature": 0.7,
-                    # Desabilita reasoning summary para evitar tags <think>
-                    "reasoning_summary": "none",
-                    "reasoning_effort": "low"
+                    "temperature": 0.7
                 },
                 timeout=120
             )
