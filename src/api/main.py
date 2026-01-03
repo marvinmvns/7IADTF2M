@@ -123,3 +123,50 @@ def get_scenario_preview(scenario_name: str):
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/config/defaults")
+def get_default_config():
+    """Retorna a configuração padrão do sistema."""
+    default_config = ExperimentConfig()
+    return {
+        "population_size": default_config.population_size,
+        "max_generations": default_config.max_generations,
+        "crossover_rate": default_config.crossover_rate,
+        "mutation_rate": default_config.mutation_rate,
+        "selection_method": default_config.selection_method.value,
+        "crossover_method": default_config.crossover_method.value,
+        "mutation_method": default_config.mutation_method.value,
+        "replacement_strategy": default_config.replacement_strategy.value,
+        "fitness_type": default_config.fitness_type.value,
+        "tournament_size": default_config.tournament_size,
+        "elite_size": default_config.elite_size,
+        "truncation_threshold": default_config.truncation_threshold,
+        "boltzmann_temperature": default_config.boltzmann_temperature,
+        "steady_state_ratio": default_config.steady_state_ratio,
+        "num_vehicles": default_config.num_vehicles,
+        "vehicle_capacity": default_config.vehicle_capacity,
+        "vehicle_speed": default_config.vehicle_speed,
+        "vehicle_max_distance": default_config.vehicle_max_distance,
+        "scenario": default_config.scenario,
+        "w_distance": default_config.w_distance,
+        "w_priority": default_config.w_priority,
+        "w_capacity": default_config.w_capacity,
+        "w_autonomy": default_config.w_autonomy,
+        "w_window": default_config.w_window,
+        "stagnation_limit": default_config.stagnation_limit,
+        "heuristic_init_ratio": default_config.heuristic_init_ratio
+    }
+
+@app.get("/config/options")
+def get_config_options():
+    """Retorna as opções disponíveis para cada campo de configuração."""
+    return {
+        "scenarios": ["small", "medium", "large", "critical"],
+        "selection_methods": [method.value for method in SelectionMethod],
+        "crossover_methods": [method.value for method in CrossoverMethod],
+        "mutation_methods": [method.value for method in MutationMethod],
+        "replacement_strategies": [strategy.value for strategy in ReplacementStrategy],
+        "fitness_types": [ft.value for ft in FitnessType],
+        "api_url": "http://localhost:8000",
+        "logo_path": "assets/logo.png"
+    }

@@ -361,11 +361,24 @@ class GeneticAlgorithm:
         routes = self._best_ever.get_routes()
         components = self.fitness_func.get_components(self._best_ever)
         
+        
+        # Compila resumo do histórico se disponível
+        history_summary = []
+        if hasattr(self.population, 'history') and self.population.history:
+            for stat in self.population.history:
+                history_summary.append({
+                    "generation": stat.generation,
+                    "best_fitness": stat.best_fitness,
+                    "avg_fitness": stat.avg_fitness,
+                    "diversity": stat.diversity
+                })
+
         details = {
             'fitness': self._best_ever.fitness,
             'initial_fitness': getattr(self, 'initial_best_fitness', None),
             'total_distance': components.total_distance,
             'num_routes': len(routes),
+            'history_summary': history_summary,
             'routes': []
         }
         

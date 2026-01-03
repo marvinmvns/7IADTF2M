@@ -16,6 +16,7 @@ Funcionalidades:
 import os
 import sys
 import time
+import requests
 from typing import List, Optional, Callable, Dict, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
@@ -45,6 +46,42 @@ from src.genetic_algorithm.mutation import MutationMethod
 from src.genetic_algorithm.mutation import MutationMethod
 from src.genetic_algorithm.fitness import FitnessType
 from src.controllers.experiment_manager import ExperimentManager
+
+
+# Função para buscar configurações da API
+def get_api_defaults():
+    """Busca configurações padrão da API."""
+    try:
+        response = requests.get("http://localhost:8000/config/defaults", timeout=1)
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    # Fallback
+    return {
+        "num_vehicles": 3,
+        "vehicle_capacity": 100.0,
+        "vehicle_max_distance": 200.0,
+        "vehicle_speed": 40.0,
+        "w_distance": 1.0,
+        "w_priority": 10.0,
+        "w_capacity": 100.0,
+        "w_autonomy": 100.0,
+        "w_window": 50.0
+    }
+
+def get_api_config_options():
+    """Busca opções de configuração da API."""
+    try:
+        response = requests.get("http://localhost:8000/config/options", timeout=1)
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    # Fallback
+    return {
+        "logo_path": "assets/logo.png"
+    }
 
 
 # Cores
@@ -166,7 +203,7 @@ class InteractiveViewer:
     def __init__(self, width: int = 1600, height: int = 900):
         """
         Inicializa o visualizador.
-        
+
         Args:
             width: Largura da janela
             height: Altura da janela
@@ -175,28 +212,32 @@ class InteractiveViewer:
             raise ImportError("Pygame não está instalado")
         if not PYGAME_GUI_AVAILABLE:
             raise ImportError("pygame_gui não está instalado")
-        
+
         self.width = width
         self.height = height
-        
+
+        # Busca configurações da API
+        api_defaults = get_api_defaults()
+        api_options = get_api_config_options()
+
         # Estado
         self.state = ViewerState.IDLE
         self.running = False
-        
+
         # Dados
         self.delivery_points: List[DeliveryPoint] = []
         self.depot_index = 0
         self.best_chromosome: Optional[Chromosome] = None
         self.generation = 0
-        
+
         # Histórico
         self.fitness_history: List[float] = []
         self.avg_fitness_history: List[float] = []
         self.diversity_history: List[float] = []
-        
+
         # Configuração do AG
         self.ga_config: Optional[GAConfig] = None
-        
+
         # Gerenciador de Experimentos
         try:
             self.experiment_manager = ExperimentManager()
@@ -205,11 +246,16 @@ class InteractiveViewer:
             import traceback
             traceback.print_exc()
             self.experiment_manager = None
-            
+
         self.current_exp_id = None
         self.ga: Optional[GeneticAlgorithm] = None
-        self.vehicle_count = 3
-        
+
+        # Valores padrão vindos da API
+        self.vehicle_count = api_defaults.get("num_vehicles", 3)
+        self.vehicle_capacity = api_defaults.get("vehicle_capacity", 100.0)
+        self.vehicle_max_distance = api_defaults.get("vehicle_max_distance", 200.0)
+        self.vehicle_speed = api_defaults.get("vehicle_speed", 40.0)
+
         # Interface
         self.screen = None
         self.clock = None
@@ -225,12 +271,12 @@ class InteractiveViewer:
         self.km_initial = None
         self.km_final = None
         self.results_rect = None
-        self.vehicle_capacity = 100.0
-        self.vehicle_max_distance = 200.0
-        self.vehicle_speed = 40.0
         self.background_map_path: Optional[str] = None
         self.background_map_surface = None
         self.selected_hospital_id: Optional[int] = None
+
+        # Logo path da API
+        self.logo_path = api_options.get("logo_path", "assets/logo.png")
         
         # Cenários
         self.scenario_names: List[str] = []
@@ -346,9 +392,9 @@ class InteractiveViewer:
                 self.background_map_surface = None
         
         # Carrega Logo Saudelog
-        if os.path.exists("assets/logo.png"):
+        if os.path.exists(self.logo_path):
             try:
-                logo_img = pygame.image.load("assets/logo.png").convert_alpha()
+                logo_img = pygame.image.load(self.logo_path).convert_alpha()
                 # Redimensiona mantendo proporção (ex: altura 80)
                 aspect_ratio = logo_img.get_width() / logo_img.get_height()
                 self.logo_surface = pygame.transform.smoothscale(logo_img, (int(80 * aspect_ratio), 80))
@@ -402,8 +448,14 @@ class InteractiveViewer:
             manager=self.ui_manager,
             container=self.ui_panel
         )
-        self.ui_elements["tab_llm"] = pygame_gui.elements.UIButton(
+        self.ui_elements["tab_weights"] = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect(10, tab_row2_y, tab_width, tab_height),
+            text="Pesos",
+            manager=self.ui_manager,
+            container=self.ui_panel
+        )
+        self.ui_elements["tab_llm"] = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(10 + tab_width + tab_gap, tab_row2_y, tab_width, tab_height),
             text="LLM",
             manager=self.ui_manager,
             container=self.ui_panel
@@ -436,15 +488,22 @@ class InteractiveViewer:
             manager=self.ui_manager,
             container=self.ui_panel
         )
+        weights_container = pygame_gui.core.UIContainer(
+            relative_rect=pygame.Rect(10, content_y, panel_rect.width - 20, content_height),
+            manager=self.ui_manager,
+            container=self.ui_panel
+        )
         vehicles_container.hide()
         results_container.hide()
         ga_container.hide()
         llm_container.hide()
+        weights_container.hide()
         self.ui_elements["container_config"] = config_container
         self.ui_elements["container_vehicles"] = vehicles_container
         self.ui_elements["container_results"] = results_container
         self.ui_elements["container_ga"] = ga_container
         self.ui_elements["container_llm"] = llm_container
+        self.ui_elements["container_weights"] = weights_container
         
         pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(16, 6, 260, 20),
@@ -701,7 +760,52 @@ class InteractiveViewer:
         add_vehicle_field("vehicle_capacity", "Capacidade", vehicle_right, 0)
         add_vehicle_field("vehicle_max_distance", "Autonomia (km)", vehicle_left, 1)
         add_vehicle_field("vehicle_speed", "Velocidade (km/h)", vehicle_right, 1)
-        
+
+        # Aba de Pesos de Fitness
+        weights_start_y = 24
+        weights_row_height = 72
+        weights_field_width = 230
+        weights_gap = 24
+        weights_left = int((panel_rect.width - 20 - (weights_field_width * 2 + weights_gap)) / 2)
+        weights_right = weights_left + weights_field_width + weights_gap
+
+        def add_weight_field(name: str, label: str, x: int, row: int, default_val: float):
+            y = weights_start_y + row * weights_row_height
+            pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect(x, y, weights_field_width, 18),
+                text=label,
+                manager=self.ui_manager,
+                container=weights_container
+            )
+            entry = pygame_gui.elements.UITextEntryLine(
+                relative_rect=pygame.Rect(x, y + 24, weights_field_width, 34),
+                manager=self.ui_manager,
+                container=weights_container
+            )
+            entry.set_text(str(default_val))
+            self.ui_elements[name] = entry
+
+        # Busca valores padrão da API
+        api_defaults_weights = get_api_defaults()
+
+        pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(16, 6, 400, 20),
+            text="Pesos da Função de Fitness Multi-Objetivo",
+            manager=self.ui_manager,
+            container=weights_container
+        )
+
+        add_weight_field("w_distance", "Peso Distância", weights_left, 0, api_defaults_weights.get("w_distance", 1.0))
+        add_weight_field("w_priority", "Peso Prioridade", weights_right, 0, api_defaults_weights.get("w_priority", 10.0))
+        add_weight_field("w_capacity", "Penalidade Capacidade", weights_left, 1, api_defaults_weights.get("w_capacity", 100.0))
+        add_weight_field("w_autonomy", "Penalidade Autonomia", weights_right, 1, api_defaults_weights.get("w_autonomy", 100.0))
+        add_weight_field("w_window", "Penalidade Janela Tempo", weights_left, 2, api_defaults_weights.get("w_window", 50.0))
+
+        # Parâmetros Condicionais de Seleção
+        add_weight_field("truncation_threshold", "Limiar Truncamento", weights_right, 2, 0.5)
+        add_weight_field("boltzmann_temp", "Temp. Boltzmann", weights_left, 3, 100.0)
+        add_weight_field("steady_state_ratio", "Taxa Steady State", weights_right, 3, 0.2)
+
         llm_title_y = 6
         llm_list_y = 34
         llm_list_width = panel_rect.width - 20 - 32
@@ -759,6 +863,8 @@ class InteractiveViewer:
             return self.ui_elements.get("container_results")
         if name == "ga":
             return self.ui_elements.get("container_ga")
+        if name == "weights":
+            return self.ui_elements.get("container_weights")
         if name == "llm":
             return self.ui_elements.get("container_llm")
         return None
@@ -770,6 +876,7 @@ class InteractiveViewer:
         vehicles_container = self._get_container("vehicles")
         results_container = self._get_container("results")
         ga_container = self._get_container("ga")
+        weights_container = self._get_container("weights")
         llm_container = self._get_container("llm")
         if config_container is not None:
             config_container.show() if name == "Mapa" else config_container.hide()
@@ -779,6 +886,8 @@ class InteractiveViewer:
             results_container.show() if name == "Resultados" else results_container.hide()
         if ga_container is not None:
             ga_container.show() if name == "Algoritmo" else ga_container.hide()
+        if weights_container is not None:
+            weights_container.show() if name == "Pesos" else weights_container.hide()
         if llm_container is not None:
             llm_container.show() if name == "LLM" else llm_container.hide()
     
@@ -834,6 +943,8 @@ class InteractiveViewer:
                         self._show_tab("Resultados")
                     elif event.ui_element == self.ui_elements.get("tab_ga"):
                         self._show_tab("Algoritmo")
+                    elif event.ui_element == self.ui_elements.get("tab_weights"):
+                        self._show_tab("Pesos")
                     elif event.ui_element == self.ui_elements.get("tab_llm"):
                         self._show_tab("LLM")
                     elif event.ui_element == self.ui_elements.get("btn_hospital_save"):
@@ -1314,6 +1425,28 @@ class InteractiveViewer:
             # Cria registro do experimento
             if self.manager:
                 try:
+                    # Busca valores dos campos de pesos (se existirem na UI)
+                    try:
+                        w_dist = float(self.ui_elements.get("w_distance", None).get_text() or 1.0) if self.ui_elements.get("w_distance") else 1.0
+                        w_prio = float(self.ui_elements.get("w_priority", None).get_text() or 10.0) if self.ui_elements.get("w_priority") else 10.0
+                        w_cap = float(self.ui_elements.get("w_capacity", None).get_text() or 100.0) if self.ui_elements.get("w_capacity") else 100.0
+                        w_auto = float(self.ui_elements.get("w_autonomy", None).get_text() or 100.0) if self.ui_elements.get("w_autonomy") else 100.0
+                        w_wind = float(self.ui_elements.get("w_window", None).get_text() or 50.0) if self.ui_elements.get("w_window") else 50.0
+                        trunc_thresh = float(self.ui_elements.get("truncation_threshold", None).get_text() or 0.5) if self.ui_elements.get("truncation_threshold") else 0.5
+                        boltz_temp = float(self.ui_elements.get("boltzmann_temp", None).get_text() or 100.0) if self.ui_elements.get("boltzmann_temp") else 100.0
+                        steady_ratio = float(self.ui_elements.get("steady_state_ratio", None).get_text() or 0.2) if self.ui_elements.get("steady_state_ratio") else 0.2
+                    except:
+                        # Fallback para valores da API
+                        api_defaults = get_api_defaults()
+                        w_dist = api_defaults.get("w_distance", 1.0)
+                        w_prio = api_defaults.get("w_priority", 10.0)
+                        w_cap = api_defaults.get("w_capacity", 100.0)
+                        w_auto = api_defaults.get("w_autonomy", 100.0)
+                        w_wind = api_defaults.get("w_window", 50.0)
+                        trunc_thresh = 0.5
+                        boltz_temp = 100.0
+                        steady_ratio = 0.2
+
                     # Monta config em dict (similar ao que a API recebe)
                     # Precisamos serializar Enums
                     config_dict = {
@@ -1335,11 +1468,15 @@ class InteractiveViewer:
                         "vehicle_max_distance": self.vehicle_max_distance,
                         "vehicle_speed": self.vehicle_speed,
                         "scenario": self.scenario_names[self.active_scenario_index] if self.scenario_names else "custom",
-                        # Pesos são fixos por enquanto ou poderiam vir da UI se implementado
-                        "w_distance": 1.0,
-                        "w_priority": 1.0, 
-                        "w_capacity": 1.0, 
-                        "w_time": 1.0
+                        # Pesos vindos da UI
+                        "w_distance": w_dist,
+                        "w_priority": w_prio,
+                        "w_capacity": w_cap,
+                        "w_autonomy": w_auto,
+                        "w_window": w_wind,
+                        "truncation_threshold": trunc_thresh,
+                        "boltzmann_temperature": boltz_temp,
+                        "steady_state_ratio": steady_ratio
                     }
                     exp = self.manager.create_experiment(config_dict)
                     self.current_experiment_id = exp.id

@@ -144,7 +144,7 @@ class ExperimentManager:
             v_dist = conf.get('vehicle_max_distance', 200.0)
             
             vehicles = []
-            for i in range(num_vehicles):
+            for i in range(1, num_vehicles + 1):
                 vehicles.append(Vehicle(
                     id=i,
                     capacity=v_cap,
@@ -179,7 +179,7 @@ class ExperimentManager:
         finally:
             db.close()
 
-    def list_experiments(self, limit=10):
+    def list_experiments(self, limit=200):
         db = self.get_db()
         try:
             return db.query(Experiment).order_by(Experiment.created_at.desc()).limit(limit).all()
