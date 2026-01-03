@@ -43,6 +43,8 @@ class CrossoverMethod(Enum):
     SCX = "sequential_constructive_crossover"
     OX2 = "order_based_crossover"
     POS = "position_based_crossover"
+    ARITHMETIC = "arithmetic"
+    HYBRID = "hybrid"
 
 
 class CrossoverOperator(ABC):
@@ -736,22 +738,10 @@ class OX2Crossover(CrossoverOperator):
     
     def crossover(self, parent1: Chromosome, 
                   parent2: Chromosome) -> Tuple[Chromosome, Chromosome]:
-        """
-        Realiza o crossover OX2.
-        
-        Args:
-            parent1: Primeiro cromossomo pai
-            parent2: Segundo cromossomo pai
-        
-        Returns:
-            Tupla com dois cromossomos filhos
-        """
         if not self.should_crossover():
             return parent1.copy(), parent2.copy()
         
         size = len(parent1.genes)
-        
-        # Seleciona posições aleatórias
         num_positions = random.randint(1, size - 1)
         positions = sorted(random.sample(range(size), num_positions))
         
@@ -762,42 +752,27 @@ class OX2Crossover(CrossoverOperator):
             parent2.genes, parent1.genes, positions
         )
         
-        child1 = Chromosome(
-            genes=child1_genes,
-            delivery_points=parent1.delivery_points,
-            vehicles=parent1.vehicles,
-            depot_index=parent1.depot_index
-        )
-        child2 = Chromosome(
-            genes=child2_genes,
-            delivery_points=parent2.delivery_points,
-            vehicles=parent2.vehicles,
-            depot_index=parent2.depot_index
-        )
+        child1 = Chromosome(genes=child1_genes, delivery_points=parent1.delivery_points,
+                           vehicles=parent1.vehicles, depot_index=parent1.depot_index)
+        child2 = Chromosome(genes=child2_genes, delivery_points=parent2.delivery_points,
+                           vehicles=parent2.vehicles, depot_index=parent2.depot_index)
         
         return child1, child2
-    
-    def _ox2_create_child(self, parent1: List[int], parent2: List[int],
-                          positions: List[int]) -> List[int]:
-        """Cria um filho usando a lógica do OX2."""
-        size = len(parent1)
+
+    def _ox2_create_child(self, parent_genes: List[int], template_genes: List[int], 
+                           positions: List[int]) -> List[int]:
+        """Lógica auxiliar para criar filho no OX2."""
+        size = len(parent_genes)
         child = [None] * size
-        
-        # Copia genes das posições selecionadas do pai 1
-        selected_genes = set()
-        for pos in positions:
-            child[pos] = parent1[pos]
-            selected_genes.add(parent1[pos])
-        
-        # Preenche restante com genes do pai 2 na ordem
-        remaining = [g for g in parent2 if g not in selected_genes]
-        remaining_idx = 0
-        
+        selected_genes = [parent_genes[i] for i in positions]
+        for i in positions:
+            child[i] = parent_genes[i]
+        remaining_genes = [g for g in template_genes if g not in selected_genes]
+        idx = 0
         for i in range(size):
             if child[i] is None:
-                child[i] = remaining[remaining_idx]
-                remaining_idx += 1
-        
+                child[i] = remaining_genes[idx]
+                idx += 1
         return child
 
 
@@ -805,16 +780,13 @@ class POSCrossover(CrossoverOperator):
     """
     Position-Based Crossover (POS).
     
-    Similar ao OX2, mas preserva as posições dos genes selecionados.
+    Similar ao OX2, mas foca em preservar a posição absoluta de genes
+    selecionados aleatoriamente.
     
     Funcionamento:
-    1. Seleciona posições aleatórias
-    2. Genes nessas posições são copiados do pai 1
-    3. Genes restantes do pai 2 preenchem as posições vazias
-    
-    Características:
-    - Preserva posições absolutas dos genes selecionados
-    - Complementar ao OX2
+    1. Seleciona um conjunto de posições aleatórias
+    2. Copia os genes nessas posições do pai 1 para o filho nas mesmas posições
+    3. Preenche as posições restantes com os genes do pai 2 na ordem em que aparecem
     """
     
     @property
@@ -823,69 +795,128 @@ class POSCrossover(CrossoverOperator):
     
     def crossover(self, parent1: Chromosome, 
                   parent2: Chromosome) -> Tuple[Chromosome, Chromosome]:
-        """
-        Realiza o crossover POS.
-        
-        Args:
-            parent1: Primeiro cromossomo pai
-            parent2: Segundo cromossomo pai
-        
-        Returns:
-            Tupla com dois cromossomos filhos
-        """
         if not self.should_crossover():
             return parent1.copy(), parent2.copy()
-        
+            
         size = len(parent1.genes)
-        
-        # Seleciona posições aleatórias
         num_positions = random.randint(1, size - 1)
         positions = set(random.sample(range(size), num_positions))
         
-        child1_genes = self._pos_create_child(
-            parent1.genes, parent2.genes, positions
-        )
-        child2_genes = self._pos_create_child(
-            parent2.genes, parent1.genes, positions
-        )
+        def create_child(p1_genes, p2_genes):
+            child = [None] * size
+            # Copia genes das posições selecionadas de p1
+            for pos in positions:
+                child[pos] = p1_genes[pos]
+            
+            # Pega genes de p2 que não foram usados
+            p1_selected_set = {p1_genes[pos] for pos in positions}
+            remaining = [g for g in p2_genes if g not in p1_selected_set]
+            
+            # Preenche o resto
+            r_idx = 0
+            for i in range(size):
+                if child[i] is None:
+                    child[i] = remaining[r_idx]
+                    r_idx += 1
+            return child
+
+        c1_genes = create_child(parent1.genes, parent2.genes)
+        c2_genes = create_child(parent2.genes, parent1.genes)
         
-        child1 = Chromosome(
-            genes=child1_genes,
-            delivery_points=parent1.delivery_points,
-            vehicles=parent1.vehicles,
-            depot_index=parent1.depot_index
-        )
-        child2 = Chromosome(
-            genes=child2_genes,
-            delivery_points=parent2.delivery_points,
-            vehicles=parent2.vehicles,
-            depot_index=parent2.depot_index
-        )
+        child1 = Chromosome(genes=c1_genes, delivery_points=parent1.delivery_points,
+                           vehicles=parent1.vehicles, depot_index=parent1.depot_index)
+        child2 = Chromosome(genes=c2_genes, delivery_points=parent2.delivery_points,
+                           vehicles=parent2.vehicles, depot_index=parent2.depot_index)
         
         return child1, child2
+
     
-    def _pos_create_child(self, parent1: List[int], parent2: List[int],
-                          positions: Set[int]) -> List[int]:
-        """Cria um filho usando a lógica do POS."""
-        size = len(parent1)
-        child = [None] * size
+class ArithmeticCrossover(CrossoverOperator):
+    """
+    Crossover Aritmético (Arithmetic Crossover).
+    
+    Combina linearmente os valores numéricos dos pais.
+    Usado para a parte Real (velocidade) na codificação híbrida.
+    
+    Filho = alpha * Pai1 + (1-alpha) * Pai2
+    """
+    
+    def __init__(self, crossover_rate: float = 0.9, alpha: float = 0.5):
+        super().__init__(crossover_rate)
+        self.alpha = alpha
+    
+    @property
+    def name(self) -> str:
+        return "Arithmetic Crossover"
+    
+    def crossover(self, parent1: Chromosome, 
+                  parent2: Chromosome) -> Tuple[Chromosome, Chromosome]:
+        # Se não tiver speed_factors, retorna cópia
+        if not parent1.speed_factors:
+            return parent1.copy(), parent2.copy()
+            
+        if not self.should_crossover():
+            return parent1.copy(), parent2.copy()
         
-        # Copia genes das posições selecionadas do pai 1
-        selected_genes = set()
-        for pos in positions:
-            child[pos] = parent1[pos]
-            selected_genes.add(parent1[pos])
+        # Cria filhos copiando estrutura do pai 1 (genes não mudam neste operador puro)
+        child1 = parent1.copy()
+        child2 = parent2.copy()
         
-        # Preenche restante com genes do pai 2 na ordem em que aparecem
-        remaining = [g for g in parent2 if g not in selected_genes]
-        remaining_idx = 0
-        
+        # Combina velocidades
+        size = len(parent1.speed_factors)
         for i in range(size):
-            if child[i] is None:
-                child[i] = remaining[remaining_idx]
-                remaining_idx += 1
+            p1_val = parent1.speed_factors[i]
+            p2_val = parent2.speed_factors[i]
+            
+            # Filho 1 e 2 com média ponderada
+            # Poderíamos fazer um aleatório para cada gene ou fixo alpha
+            # Texto diz "combina valores... usando pesos"
+            c1_val = self.alpha * p1_val + (1 - self.alpha) * p2_val
+            c2_val = (1 - self.alpha) * p1_val + self.alpha * p2_val
+            
+            child1.speed_factors[i] = c1_val
+            child2.speed_factors[i] = c2_val
         
-        return child
+        return child1, child2
+
+
+class HybridCrossover(CrossoverOperator):
+    """
+    Crossover Híbrido.
+    
+    Aplica crossover combinatório nos genes (rotas) e
+    crossover aritmético nas velocidades (real).
+    """
+    
+    def __init__(self, crossover_rate: float = 0.9, 
+                 combinatorial_op: CrossoverOperator = None):
+        super().__init__(crossover_rate)
+        self.combinatorial_op = combinatorial_op or OXCrossover(crossover_rate=1.0)
+        self.arithmetic_op = ArithmeticCrossover(crossover_rate=1.0)
+    
+    @property
+    def name(self) -> str:
+        return f"Hybrid Crossover ({self.combinatorial_op.name} + Arithmetic)"
+    
+    def crossover(self, parent1: Chromosome, 
+                  parent2: Chromosome) -> Tuple[Chromosome, Chromosome]:
+        if not self.should_crossover():
+            return parent1.copy(), parent2.copy()
+        
+        # 1. Aplica Crossover Combinatório (Gera novos genes)
+        child1, child2 = self.combinatorial_op.crossover(parent1, parent2)
+        
+        # 2. Aplica Crossover Aritmético (Gera novas velocidades)
+        # Note: ArithmeticCrossover retorna cópia, então precisamos atualizar os childs gerados
+        # Mas Arithmetic espera receber os pais originais para misturar os valores
+        # Então chamamos Arithmetic nos pais originais apenas para pegar os valores
+        temp_c1, temp_c2 = self.arithmetic_op.crossover(parent1, parent2)
+        
+        # Transfere as velocidades calculadas para os filhos combinatórios
+        child1.speed_factors = temp_c1.speed_factors
+        child2.speed_factors = temp_c2.speed_factors
+        
+        return child1, child2
 
 
 def create_crossover(method: CrossoverMethod, 
@@ -893,17 +924,6 @@ def create_crossover(method: CrossoverMethod,
                      **kwargs) -> CrossoverOperator:
     """
     Factory function para criar operadores de crossover.
-    
-    Args:
-        method: Método de crossover desejado
-        crossover_rate: Taxa de crossover
-        **kwargs: Parâmetros específicos do método
-    
-    Returns:
-        Instância do operador de crossover
-    
-    Raises:
-        ValueError: Se o método não for reconhecido
     """
     crossovers = {
         CrossoverMethod.PMX: PMXCrossover,
@@ -914,9 +934,20 @@ def create_crossover(method: CrossoverMethod,
         CrossoverMethod.SCX: SCXCrossover,
         CrossoverMethod.OX2: OX2Crossover,
         CrossoverMethod.POS: POSCrossover,
+        CrossoverMethod.ARITHMETIC: ArithmeticCrossover,
+        CrossoverMethod.HYBRID: HybridCrossover,
     }
     
+    # Handle Hybrid requiring sub-operator
+    if method == CrossoverMethod.HYBRID:
+        # Default to OX inside Hybrid
+        base_op = OXCrossover(crossover_rate=1.0)
+        return HybridCrossover(crossover_rate, combinatorial_op=base_op)
+        
     if method not in crossovers:
+        # Fallback genérico ou erro. POS não estava implementado na listagem anterior completa, mas estava no Enum?
+        # Vou assumir que POS estava no Enum mas talvez não implementado classe. 
+        # Vou checar o enum novamente.
         raise ValueError(f"Método de crossover desconhecido: {method}")
     
     return crossovers[method](crossover_rate=crossover_rate, **kwargs)

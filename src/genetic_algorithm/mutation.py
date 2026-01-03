@@ -38,9 +38,11 @@ class MutationMethod(Enum):
     SCRAMBLE = "scramble"
     INSERT = "insert"
     DISPLACEMENT = "displacement"
+    GAUSSIAN = "gaussian"
+    HYBRID = "hybrid"
     TWO_OPT = "2-opt"
     THREE_OPT = "3-opt"
-    RSM = "reverse_sequence"
+    REVERSE_SEQUENCE = "reverse_sequence"
 
 
 class MutationOperator(ABC):
@@ -91,15 +93,6 @@ class SwapMutation(MutationOperator):
     Seleciona duas posições aleatórias e troca os genes entre elas.
     É o operador de mutação mais simples para permutações.
     
-    Funcionamento:
-    1. Seleciona duas posições i e j aleatoriamente
-    2. Troca genes[i] com genes[j]
-    
-    Características:
-    - Simples e rápido
-    - Alteração mínima na estrutura
-    - Preserva a maior parte das adjacências
-    
     Exemplo:
         Antes:  [1, 2, 3, 4, 5]
         Após:   [1, 4, 3, 2, 5]  (trocou posições 1 e 3)
@@ -110,15 +103,6 @@ class SwapMutation(MutationOperator):
         return "Swap Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação por troca.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
@@ -128,10 +112,7 @@ class SwapMutation(MutationOperator):
         if size < 2:
             return mutated
         
-        # Seleciona duas posições diferentes
         i, j = random.sample(range(size), 2)
-        
-        # Troca os genes
         mutated.genes[i], mutated.genes[j] = mutated.genes[j], mutated.genes[i]
         mutated.invalidate_cache()
         
@@ -142,17 +123,7 @@ class InversionMutation(MutationOperator):
     """
     Mutação por Inversão (Inversion Mutation).
     
-    Seleciona um segmento do cromossomo e inverte a ordem dos genes
-    dentro desse segmento.
-    
-    Funcionamento:
-    1. Seleciona dois pontos de corte i e j
-    2. Inverte a sequência de genes entre i e j
-    
-    Características:
-    - Preserva adjacências nas bordas do segmento
-    - Pode fazer grandes alterações na estrutura
-    - Equivalente a uma operação 2-opt
+    Seleciona um segmento do cromossomo e inverte a ordem dos genes.
     
     Exemplo:
         Antes:  [1, 2, 3, 4, 5, 6]
@@ -164,15 +135,6 @@ class InversionMutation(MutationOperator):
         return "Inversion Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação por inversão.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
@@ -182,10 +144,7 @@ class InversionMutation(MutationOperator):
         if size < 2:
             return mutated
         
-        # Seleciona pontos de corte
         i, j = sorted(random.sample(range(size), 2))
-        
-        # Inverte o segmento
         mutated.genes[i:j+1] = mutated.genes[i:j+1][::-1]
         mutated.invalidate_cache()
         
@@ -196,17 +155,7 @@ class ScrambleMutation(MutationOperator):
     """
     Mutação por Embaralhamento (Scramble Mutation).
     
-    Seleciona um segmento do cromossomo e embaralha aleatoriamente
-    os genes dentro desse segmento.
-    
-    Funcionamento:
-    1. Seleciona dois pontos de corte i e j
-    2. Embaralha aleatoriamente os genes entre i e j
-    
-    Características:
-    - Alta perturbação local
-    - Preserva genes fora do segmento
-    - Útil para escapar de ótimos locais
+    Seleciona um segmento do cromossomo e embaralha aleatoriamente.
     
     Exemplo:
         Antes:  [1, 2, 3, 4, 5, 6]
@@ -218,15 +167,6 @@ class ScrambleMutation(MutationOperator):
         return "Scramble Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação por embaralhamento.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
@@ -236,10 +176,7 @@ class ScrambleMutation(MutationOperator):
         if size < 2:
             return mutated
         
-        # Seleciona pontos de corte
         i, j = sorted(random.sample(range(size), 2))
-        
-        # Extrai e embaralha o segmento
         segment = mutated.genes[i:j+1]
         random.shuffle(segment)
         mutated.genes[i:j+1] = segment
@@ -252,18 +189,7 @@ class InsertMutation(MutationOperator):
     """
     Mutação por Inserção (Insert Mutation).
     
-    Remove um gene de sua posição e o insere em outra posição,
-    deslocando os genes intermediários.
-    
-    Funcionamento:
-    1. Seleciona uma posição i (gene a mover)
-    2. Seleciona uma posição j (destino)
-    3. Remove gene de i e insere em j
-    
-    Características:
-    - Altera a ordem relativa de alguns genes
-    - Preserva mais estrutura que scramble
-    - Movimento mais controlado
+    Remove um gene de sua posição e o insere em outra.
     
     Exemplo:
         Antes:  [1, 2, 3, 4, 5]
@@ -275,15 +201,6 @@ class InsertMutation(MutationOperator):
         return "Insert Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação por inserção.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
@@ -293,17 +210,13 @@ class InsertMutation(MutationOperator):
         if size < 2:
             return mutated
         
-        # Seleciona posição de origem e destino
         i = random.randint(0, size - 1)
         j = random.randint(0, size - 1)
         
         if i == j:
             return mutated
         
-        # Remove gene da posição i
         gene = mutated.genes.pop(i)
-        
-        # Insere na posição j
         mutated.genes.insert(j, gene)
         mutated.invalidate_cache()
         
@@ -315,17 +228,6 @@ class DisplacementMutation(MutationOperator):
     Mutação por Deslocamento (Displacement Mutation).
     
     Remove um segmento do cromossomo e o insere em outra posição.
-    É uma generalização da mutação por inserção.
-    
-    Funcionamento:
-    1. Seleciona um segmento [i, j]
-    2. Remove o segmento
-    3. Insere em uma nova posição k
-    
-    Características:
-    - Move blocos inteiros de genes
-    - Preserva adjacências dentro do bloco
-    - Pode causar grandes mudanças estruturais
     
     Exemplo:
         Antes:  [1, 2, 3, 4, 5, 6]
@@ -337,15 +239,6 @@ class DisplacementMutation(MutationOperator):
         return "Displacement Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação por deslocamento.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
@@ -355,46 +248,70 @@ class DisplacementMutation(MutationOperator):
         if size < 3:
             return mutated
         
-        # Seleciona segmento
         i, j = sorted(random.sample(range(size), 2))
         segment = mutated.genes[i:j+1]
-        
-        # Remove segmento
         del mutated.genes[i:j+1]
         
-        # Seleciona nova posição
         new_size = len(mutated.genes)
         k = random.randint(0, new_size)
-        
-        # Insere segmento na nova posição
         mutated.genes[k:k] = segment
         mutated.invalidate_cache()
         
         return mutated
 
 
-class TwoOptMutation(MutationOperator):
+class GaussianMutation(MutationOperator):
     """
-    Mutação 2-opt.
+    Mutação Gaussiana (Gaussian Mutation).
     
-    Remove duas arestas não adjacentes e reconecta os segmentos
-    de forma diferente. É uma técnica clássica de melhoria local
-    para o TSP.
+    Adiciona ruído gaussiano (distribuição normal) aos genes reais.
+    Aplicável para os fatores de velocidade no modo Híbrido.
     
     Funcionamento:
-    1. Seleciona duas arestas (i, i+1) e (j, j+1)
-    2. Remove as arestas
-    3. Reconecta invertendo o segmento entre i+1 e j
+    1. Para cada fator de velocidade, adiciona um valor aleatório N(0, sigma)
+    2. Garante que o valor permaneça nos limites [0.5, 1.5]
+    """
     
-    Características:
-    - Operador de melhoria local muito eficiente
-    - Preserva a estrutura geral da rota
-    - Pode ser aplicado repetidamente para refinamento
+    def __init__(self, mutation_rate: float = 0.1, sigma: float = 0.1):
+        super().__init__(mutation_rate)
+        self.sigma = sigma
     
-    Exemplo:
-        Rota: A-B-C-D-E-F-A
-        Remove: (B,C) e (E,F)
-        Resultado: A-B-E-D-C-F-A
+    @property
+    def name(self) -> str:
+        return "Gaussian Mutation"
+    
+    def mutate(self, chromosome: Chromosome) -> Chromosome:
+        # Se não tiver speed_factors, não faz nada
+        if not chromosome.speed_factors:
+            return chromosome
+            
+        if not self.should_mutate():
+            return chromosome
+        
+        mutated = chromosome.copy()
+        
+        # Aplica mutação em cada fator de velocidade
+        new_speeds = []
+        for speed in mutated.speed_factors:
+            # Adiciona ruído com probabilidade (ou sempre? Geralmente mutação real altera um pouco tudo ou alguns)
+            # Aqui vamos alterar com probabilidade 50% cada gene para variar
+            if random.random() < 0.5:
+                noise = random.gauss(0, self.sigma)
+                new_speed = max(0.5, min(1.5, speed + noise)) # Clamp [0.5, 1.5]
+                new_speeds.append(new_speed)
+            else:
+                new_speeds.append(speed)
+        
+        mutated.speed_factors = new_speeds
+        mutated.invalidate_cache()
+        return mutated
+
+
+class TwoOptMutation(MutationOperator):
+    """
+    Mutação por 2-opt.
+    Reconecta duas arestas para eliminar cruzamentos, invertendo um segmento.
+    É equivalente à Inversion Mutation, mas com semântica de melhoria local.
     """
     
     @property
@@ -402,113 +319,25 @@ class TwoOptMutation(MutationOperator):
         return "2-opt Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação 2-opt.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
         mutated = chromosome.copy()
         size = len(mutated.genes)
-        
         if size < 4:
             return mutated
-        
-        # Seleciona duas posições para o 2-opt
-        i = random.randint(0, size - 3)
-        j = random.randint(i + 2, size - 1)
-        
-        # Aplica 2-opt (inverte o segmento entre i+1 e j)
-        mutated.genes[i+1:j+1] = mutated.genes[i+1:j+1][::-1]
-        mutated.invalidate_cache()
-        
-        return mutated
-    
-    def apply_best_2opt(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica o melhor movimento 2-opt possível.
-        
-        Testa todos os movimentos 2-opt e aplica o que resulta
-        na maior melhoria de fitness.
-        
-        Args:
-            chromosome: Cromossomo a ser melhorado
-        
-        Returns:
-            Cromossomo com o melhor 2-opt aplicado
-        """
-        best = chromosome.copy()
-        best_distance = self._calculate_route_distance(best)
-        improved = True
-        
-        while improved:
-            improved = False
-            size = len(best.genes)
             
-            for i in range(size - 2):
-                for j in range(i + 2, size):
-                    # Cria candidato com 2-opt
-                    candidate = best.copy()
-                    candidate.genes[i+1:j+1] = candidate.genes[i+1:j+1][::-1]
-                    
-                    distance = self._calculate_route_distance(candidate)
-                    
-                    if distance < best_distance:
-                        best = candidate
-                        best_distance = distance
-                        improved = True
-                        break
-                
-                if improved:
-                    break
-        
-        best.invalidate_cache()
-        return best
-    
-    def _calculate_route_distance(self, chromosome: Chromosome) -> float:
-        """Calcula a distância total da rota."""
-        if not chromosome.delivery_points:
-            return float('inf')
-        
-        points = chromosome.delivery_points
-        depot = points[chromosome.depot_index]
-        genes = chromosome.genes
-        
-        # Distância do depósito ao primeiro ponto
-        distance = depot.distance_to(points[genes[0]])
-        
-        # Distância entre pontos consecutivos
-        for i in range(len(genes) - 1):
-            distance += points[genes[i]].distance_to(points[genes[i + 1]])
-        
-        # Distância do último ponto ao depósito
-        distance += points[genes[-1]].distance_to(depot)
-        
-        return distance
+        i, j = sorted(random.sample(range(size), 2))
+        mutated.genes[i:j+1] = mutated.genes[i:j+1][::-1]
+        mutated.invalidate_cache()
+        return mutated
 
 
 class ThreeOptMutation(MutationOperator):
     """
-    Mutação 3-opt.
-    
-    Remove três arestas e reconecta os segmentos de forma otimizada.
-    É mais poderoso que 2-opt mas também mais custoso computacionalmente.
-    
-    Funcionamento:
-    1. Seleciona três arestas não adjacentes
-    2. Remove as arestas
-    3. Reconecta os quatro segmentos de uma das formas possíveis
-    
-    Características:
-    - Pode encontrar melhorias que 2-opt não consegue
-    - Mais custoso computacionalmente
-    - Útil para refinamento final
+    Mutação por 3-opt.
+    Remove três arestas e tenta reconectá-las de forma otimizada.
+    Aqui implementada como uma mutação que embaralha ou inverte 3 segmentos.
     """
     
     @property
@@ -516,189 +345,96 @@ class ThreeOptMutation(MutationOperator):
         return "3-opt Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação 3-opt.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
-        
+            
         mutated = chromosome.copy()
         size = len(mutated.genes)
-        
         if size < 6:
             return mutated
+            
+        # Seleciona 3 cortes
+        indices = sorted(random.sample(range(size), 3))
+        i, j, k = indices
         
-        # Seleciona três posições para o 3-opt
-        positions = sorted(random.sample(range(size), 3))
-        i, j, k = positions
+        # Existem várias formas de reconectar 3 segmentos (A, B, C, D)
+        # Vamos usar uma simples inversão e troca de segmentos
+        part1 = mutated.genes[:i]
+        part2 = mutated.genes[i:j]
+        part3 = mutated.genes[j:k]
+        part4 = mutated.genes[k:]
         
-        # Aplica uma das reconexões 3-opt aleatoriamente
-        # Existem 8 formas de reconectar, escolhemos uma aleatória
-        reconnection = random.randint(0, 3)
-        
-        segment1 = mutated.genes[:i+1]
-        segment2 = mutated.genes[i+1:j+1]
-        segment3 = mutated.genes[j+1:k+1]
-        segment4 = mutated.genes[k+1:]
-        
-        if reconnection == 0:
-            # Inverte segmento 2
-            mutated.genes = segment1 + segment2[::-1] + segment3 + segment4
-        elif reconnection == 1:
-            # Inverte segmento 3
-            mutated.genes = segment1 + segment2 + segment3[::-1] + segment4
-        elif reconnection == 2:
-            # Inverte segmentos 2 e 3
-            mutated.genes = segment1 + segment2[::-1] + segment3[::-1] + segment4
+        # Caso aleatório de 3-opt reconexão
+        r = random.random()
+        if r < 0.5:
+            mutated.genes = part1 + part3 + part2 + part4
         else:
-            # Troca segmentos 2 e 3
-            mutated.genes = segment1 + segment3 + segment2 + segment4
-        
+            mutated.genes = part1 + part3[::-1] + part2[::-1] + part4
+            
         mutated.invalidate_cache()
         return mutated
 
 
 class ReverseSequenceMutation(MutationOperator):
     """
-    Mutação por Reversão de Sequência (Reverse Sequence Mutation - RSM).
-    
-    Similar à mutação por inversão, mas com seleção de segmento
-    baseada em tamanho aleatório.
-    
-    Funcionamento:
-    1. Seleciona um ponto de início aleatório
-    2. Seleciona um tamanho de segmento aleatório
-    3. Inverte o segmento
-    
-    Características:
-    - Variante da inversão com controle de tamanho
-    - Pode ser configurado para segmentos menores ou maiores
+    Reverse Sequence Mutation (RSM).
+    Inverte a sequência de um segmento selecionado aleatoriamente.
+    Semelhante à inversão simples.
     """
-    
-    def __init__(self, mutation_rate: float = 0.1,
-                 min_segment_ratio: float = 0.1,
-                 max_segment_ratio: float = 0.5):
-        """
-        Inicializa o operador RSM.
-        
-        Args:
-            mutation_rate: Taxa de mutação
-            min_segment_ratio: Tamanho mínimo do segmento (fração do cromossomo)
-            max_segment_ratio: Tamanho máximo do segmento (fração do cromossomo)
-        """
-        super().__init__(mutation_rate)
-        self.min_segment_ratio = min_segment_ratio
-        self.max_segment_ratio = max_segment_ratio
     
     @property
     def name(self) -> str:
-        return "RSM (Reverse Sequence Mutation)"
+        return "Reverse Sequence Mutation"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação RSM.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
-        
+            
         mutated = chromosome.copy()
         size = len(mutated.genes)
+        if size < 2: return mutated
         
-        if size < 2:
-            return mutated
-        
-        # Calcula tamanho do segmento
-        min_size = max(2, int(size * self.min_segment_ratio))
-        max_size = max(min_size, int(size * self.max_segment_ratio))
-        segment_size = random.randint(min_size, max_size)
-        
-        # Seleciona ponto de início
-        start = random.randint(0, size - segment_size)
-        end = start + segment_size
-        
-        # Inverte o segmento
-        mutated.genes[start:end] = mutated.genes[start:end][::-1]
+        i, j = sorted(random.sample(range(size), 2))
+        mutated.genes[i:j+1] = list(reversed(mutated.genes[i:j+1]))
         mutated.invalidate_cache()
-        
         return mutated
 
 
-class CompositeMutation(MutationOperator):
+class HybridMutation(MutationOperator):
     """
-    Mutação Composta.
+    Mutação Híbrida.
     
-    Combina múltiplos operadores de mutação, aplicando-os
-    sequencialmente ou escolhendo um aleatoriamente.
-    
-    Características:
-    - Flexível e configurável
-    - Pode combinar diferentes estratégias
-    - Útil para exploração diversificada
+    Combina uma mutação combinatória (para as rotas) com 
+    uma mutação gaussiana (para as velocidades).
     """
     
-    def __init__(self, operators: List[MutationOperator],
-                 mutation_rate: float = 0.1,
-                 sequential: bool = False):
-        """
-        Inicializa a mutação composta.
-        
-        Args:
-            operators: Lista de operadores de mutação
-            mutation_rate: Taxa de mutação geral
-            sequential: Se True, aplica todos; se False, escolhe um
-        """
+    def __init__(self, mutation_rate: float = 0.1, 
+                 combinatorial_op: MutationOperator = None):
         super().__init__(mutation_rate)
-        self.operators = operators
-        self.sequential = sequential
+        self.combinatorial_op = combinatorial_op or InversionMutation(mutation_rate=1.0) # Taxa controlada pelo pai
+        self.gaussian_op = GaussianMutation(mutation_rate=1.0, sigma=0.1)
     
     @property
     def name(self) -> str:
-        op_names = [op.name for op in self.operators]
-        mode = "Sequential" if self.sequential else "Random"
-        return f"Composite Mutation ({mode}: {', '.join(op_names)})"
+        return f"Hybrid Mutation ({self.combinatorial_op.name} + Gaussian)"
     
     def mutate(self, chromosome: Chromosome) -> Chromosome:
-        """
-        Aplica mutação composta.
-        
-        Args:
-            chromosome: Cromossomo a ser mutado
-        
-        Returns:
-            Cromossomo mutado
-        """
         if not self.should_mutate():
             return chromosome
         
+        # Copia primeiro
         mutated = chromosome.copy()
         
-        if self.sequential:
-            # Aplica todos os operadores em sequência
-            for operator in self.operators:
-                # Força a mutação (ignora taxa individual)
-                temp_rate = operator.mutation_rate
-                operator.mutation_rate = 1.0
-                mutated = operator.mutate(mutated)
-                operator.mutation_rate = temp_rate
-        else:
-            # Escolhe um operador aleatoriamente
-            operator = random.choice(self.operators)
-            temp_rate = operator.mutation_rate
-            operator.mutation_rate = 1.0
-            mutated = operator.mutate(mutated)
-            operator.mutation_rate = temp_rate
+        # Aplica mutação combinatória (rotas)
+        # Note: passamos 'mutated' não 'chromosome' para acumular mudanças
+        # Forçamos execução (taxa já testada no Hybrid)
+        if self.combinatorial_op:
+             mutated = self.combinatorial_op.mutate(mutated)
+        
+        # Aplica mutação gaussiana (velocidades)
+        # O GaussianMutation.mutate faz verificação de taxa, mas instanciamos com rate=1.0
+        # Entretanto, sua lógica interna pode ter randomness nos genes
+        mutated = self.gaussian_op.mutate(mutated)
         
         return mutated
 
@@ -708,30 +444,28 @@ def create_mutation(method: MutationMethod,
                     **kwargs) -> MutationOperator:
     """
     Factory function para criar operadores de mutação.
-    
-    Args:
-        method: Método de mutação desejado
-        mutation_rate: Taxa de mutação
-        **kwargs: Parâmetros específicos do método
-    
-    Returns:
-        Instância do operador de mutação
-    
-    Raises:
-        ValueError: Se o método não for reconhecido
     """
-    mutations = {
-        MutationMethod.SWAP: SwapMutation,
-        MutationMethod.INVERSION: InversionMutation,
-        MutationMethod.SCRAMBLE: ScrambleMutation,
-        MutationMethod.INSERT: InsertMutation,
-        MutationMethod.DISPLACEMENT: DisplacementMutation,
-        MutationMethod.TWO_OPT: TwoOptMutation,
-        MutationMethod.THREE_OPT: ThreeOptMutation,
-        MutationMethod.RSM: ReverseSequenceMutation,
-    }
+    if method == MutationMethod.SWAP:
+        return SwapMutation(mutation_rate)
+    elif method == MutationMethod.INVERSION:
+        return InversionMutation(mutation_rate)
+    elif method == MutationMethod.SCRAMBLE:
+        return ScrambleMutation(mutation_rate)
+    elif method == MutationMethod.INSERT:
+        return InsertMutation(mutation_rate)
+    elif method == MutationMethod.DISPLACEMENT:
+        return DisplacementMutation(mutation_rate)
+    elif method == MutationMethod.GAUSSIAN:
+        return GaussianMutation(mutation_rate, sigma=kwargs.get('sigma', 0.1))
+    elif method == MutationMethod.HYBRID:
+        # Por padrão usa Inversion como base combinatória se não especificado
+        base_op = InversionMutation(mutation_rate=1.0) # Always apply inside hybrid
+        return HybridMutation(mutation_rate, combinatorial_op=base_op)
+    elif method == MutationMethod.TWO_OPT:
+        return TwoOptMutation(mutation_rate)
+    elif method == MutationMethod.THREE_OPT:
+        return ThreeOptMutation(mutation_rate)
+    elif method == MutationMethod.REVERSE_SEQUENCE:
+        return ReverseSequenceMutation(mutation_rate)
     
-    if method not in mutations:
-        raise ValueError(f"Método de mutação desconhecido: {method}")
-    
-    return mutations[method](mutation_rate=mutation_rate, **kwargs)
+    raise ValueError(f"Método de mutação desconhecido: {method}")

@@ -133,7 +133,7 @@ class GeneticAlgorithm:
         """
         self.config = config
         self.delivery_points = delivery_points
-        self.vehicles = vehicles or [Vehicle(id=0)]
+        self.vehicles = vehicles or [Vehicle(id=1)]
         self.depot_index = depot_index
         
         # Inicializa operadores
@@ -206,11 +206,13 @@ class GeneticAlgorithm:
         # Avalia população inicial
         self.population.evaluate(self.fitness_func.evaluate)
         self._best_ever = self.population.get_best().copy()
+        self.initial_best_fitness = self._best_ever.fitness
         convergence_gen = 0
         
         if self.config.verbose:
             print(f"Algoritmo Genético iniciado")
             print(f"  População: {self.config.population_size}")
+            print(f"  Melhor Fitness Inicial: {self.initial_best_fitness:.4f}")
             print(f"  Seleção: {self.selector.name}")
             print(f"  Crossover: {self.crossover.name}")
             print(f"  Mutação: {self.mutator.name}")
@@ -361,6 +363,7 @@ class GeneticAlgorithm:
         
         details = {
             'fitness': self._best_ever.fitness,
+            'initial_fitness': getattr(self, 'initial_best_fitness', None),
             'total_distance': components.total_distance,
             'num_routes': len(routes),
             'routes': []
@@ -373,8 +376,18 @@ class GeneticAlgorithm:
                 'num_stops': len(route.points),
                 'distance': route.total_distance,
                 'demand': route.total_demand,
+                'load': route.total_demand, # Alias para compatibilidade
                 'capacity_used': route.total_demand / route.vehicle.capacity * 100,
-                'stops': [p.name for p in route.points]
+                'stops': [
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "priority": p.priority,
+                        "demand": p.demand,
+                        "arrival_time": 0 # TODO: Implementar tempo
+                    }
+                    for p in route.points
+                ]
             }
             details['routes'].append(route_info)
         
@@ -515,8 +528,9 @@ class GAExperiment:
             MutationMethod.SWAP,
             MutationMethod.INVERSION,
             MutationMethod.SCRAMBLE,
-            MutationMethod.TWO_OPT,
+            MutationMethod.INSERT,
             MutationMethod.DISPLACEMENT,
+            MutationMethod.HYBRID,
         ]
         
         results = []

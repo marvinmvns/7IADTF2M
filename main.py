@@ -56,6 +56,7 @@ from data.hospitais_sp import (
     get_all_hospitals, get_depot, scenario_small, scenario_medium,
     scenario_large, HospitalData, DEPOSITO_CENTRAL
 )
+from src.controllers.experiment_manager import ExperimentManager
 
 
 def create_delivery_points(hospitals: List[HospitalData]) -> List[DeliveryPoint]:
@@ -97,7 +98,7 @@ def create_vehicles(num_vehicles: int = 3) -> List[Vehicle]:
     """
     vehicles = []
     
-    for i in range(num_vehicles):
+    for i in range(1, num_vehicles + 1):
         vehicle = Vehicle(
             id=i,
             capacity=100.0,  # Capacidade em unidades
@@ -169,7 +170,54 @@ def run_basic_optimization(verbose: bool = True) -> GAResult:
         depot_index=0
     )
     
-    result = ga.run()
+    # Gerenciador de Experimentos
+    manager = ExperimentManager()
+    
+    # Prepara config para salvar
+    config_dict = config.__dict__.copy()
+    for k, v in config_dict.items():
+        if hasattr(v, 'value'):
+            config_dict[k] = v.value
+            
+    try:
+        exp_id = manager.create_experiment(config_dict, "running")
+        print(f"    - Experimento registrado com ID: {exp_id}")
+        
+        start_time = time.time()
+        result = ga.run()
+        end_time = time.time()
+        
+        # Salva resultados
+        routes_info = []
+        for r in result.best_chromosome.get_routes():
+             points_ids = [p.id for p in r.points]
+             routes_info.append({
+                 "vehicle_id": r.vehicle.id,
+                 "distance": r.total_distance,
+                 "demand": r.total_demand,
+                 "points": points_ids
+             })
+             
+        result_data = {
+            "best_fitness": float(result.best_fitness),
+            "generations_run": result.generations_run,
+            "execution_time": result.execution_time,
+            "routes": routes_info,
+            "initial_fitness": result.initial_fitness if hasattr(result, "initial_fitness") else 0,
+            "convergence_generation": result.convergence_generation
+        }
+        
+        manager.complete_experiment(exp_id, result_data)
+        print("    - Resultados salvos no banco de dados.")
+        
+    except Exception as e:
+        print(f"Erro na execução ou salvamento: {e}")
+        if 'exp_id' in locals():
+            manager.fail_experiment(exp_id, str(e))
+        # Re-raise para não esconder erro do usuário CLI se for crítico
+        # mas return result pode falhar se não tiver result
+        if 'result' not in locals():
+             raise e
     
     # Mostra resultados
     print("\n" + "=" * 70)
@@ -206,7 +254,7 @@ def run_basic_optimization(verbose: bool = True) -> GAResult:
     return result
 
 
-def run_with_visualization():
+def run_with_visualization(custom_config: Optional[GAConfig] = None):
     """Executa com visualização Pygame."""
     print("=" * 70)
     print("MODO VISUALIZAÇÃO INTERATIVA")
@@ -228,19 +276,23 @@ def run_with_visualization():
     ]
     
     # Configura AG
-    config = GAConfig(
-        population_size=80,
-        max_generations=300,
-        crossover_rate=0.9,
-        mutation_rate=0.15,
-        selection_method=SelectionMethod.TOURNAMENT,
-        crossover_method=CrossoverMethod.OX,
-        mutation_method=MutationMethod.INVERSION,
-        elite_size=2,
-        stagnation_limit=60,
-        heuristic_init_ratio=0.2,
-        verbose=False
-    )
+    if custom_config:
+        config = custom_config
+        print("Usando configuração personalizada.")
+    else:
+        config = GAConfig(
+            population_size=80,
+            max_generations=300,
+            crossover_rate=0.9,
+            mutation_rate=0.15,
+            selection_method=SelectionMethod.TOURNAMENT,
+            crossover_method=CrossoverMethod.OX,
+            mutation_method=MutationMethod.INVERSION,
+            elite_size=2,
+            stagnation_limit=60,
+            heuristic_init_ratio=0.2,
+            verbose=False
+        )
     
     # Cria visualizador
     viewer = InteractiveViewer(width=1600, height=900)
@@ -402,13 +454,48 @@ def main():
         action='store_true',
         help='Modo silencioso'
     )
+    parser.add_argument(
+        '--config', '-c',
+        type=str,
+        help='Caminho para arquivo JSON de configuração ou string JSON'
+    )
     
     args = parser.parse_args()
     
+    # Carrega config se fornecida
+    ga_config = None
+    if args.config:
+        import json
+        try:
+            if os.path.exists(args.config):
+                with open(args.config, 'r') as f:
+                    config_dict = json.load(f)
+            else:
+                config_dict = json.loads(args.config)
+            
+            ga_config = GAConfig(
+                population_size=config_dict.get('population_size', 100),
+                max_generations=config_dict.get('max_generations', 300),
+                crossover_rate=config_dict.get('crossover_rate', 0.9),
+                mutation_rate=config_dict.get('mutation_rate', 0.15),
+                selection_method=SelectionMethod(config_dict.get('selection_method', 'tournament')),
+                crossover_method=CrossoverMethod(config_dict.get('crossover_method', 'ox')),
+                mutation_method=MutationMethod(config_dict.get('mutation_method', 'inversion')),
+                replacement_strategy=config_dict.get('replacement_strategy', 'elitist'),
+                elite_size=config_dict.get('elite_size', 2),
+                tournament_size=config_dict.get('tournament_size', 3),
+                stagnation_limit=config_dict.get('stagnation_limit', 50),
+                heuristic_init_ratio=config_dict.get('heuristic_init_ratio', 0.2),
+                verbose=not args.quiet
+            )
+        except Exception as e:
+            print(f"Erro ao carregar configuração: {e}")
+            return
+
     if args.mode == 'basic':
         run_basic_optimization(verbose=not args.quiet)
     elif args.mode == 'visual':
-        run_with_visualization()
+        run_with_visualization(custom_config=ga_config)
     elif args.mode == 'experiment':
         run_experiment_comparison()
     elif args.mode == 'map':

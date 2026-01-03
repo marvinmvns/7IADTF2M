@@ -74,7 +74,7 @@ class Population:
         """
         self.size = size
         self.delivery_points = delivery_points
-        self.vehicles = vehicles or [Vehicle(id=0)]
+        self.vehicles = vehicles or [Vehicle(id=1)]
         self.depot_index = depot_index
         self.chromosomes: List[Chromosome] = []
         self.generation = 0

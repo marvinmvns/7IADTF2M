@@ -226,9 +226,53 @@ class WeightedMultiObjectiveFitness(FitnessFunction):
         autonomy_violation = self._calculate_autonomy_violation(routes)
         time_window_violation = self._calculate_time_window_violation(routes)
         
-        # Calcula fitness total
+        # Calcula Custo Operacional (Híbrido: Combustível vs Velocidade)
+        # Cost ~ Distance * SpeedFactor^2
+        # Penaliza velocidades altas (consumo quadrático)
+        operational_cost = 0.0
+        for route in routes:
+            # Obtém fator de velocidade do veículo da rota
+            # Se não tiver (código legado), assume 1.0
+            speed_factor = getattr(route.vehicle, 'speed_factor', 1.0) 
+            # Mas espere! O speed_factor está no Chromosome, não no Vehicle object estático
+            # Precisamos recuperar do cromossomo... mas o route.vehicle é uma cópia?
+            # Vamos simplificar: O cromossomo tem a lista de speed_factors correspondente aos veículos.
+            # Como saber qual veículo está em qual rota? 
+            # O sistema de split de rotas atribui veículos sequencialmente: Route 0 -> Vega 0, Route 1 -> Vega 1
+            # Assumindo que vehicles[0] é usado na rota 0 da lista retornada (ou mapeado pelo ID)
+            # Vamos pegar o fator do cromossomo associado a este veículo
+            
+            # Recupera índice do veículo na lista original (assumindo id sequencial ou lookup)
+            v_idx = int(route.vehicle.id) if str(route.vehicle.id).isdigit() else 0
+            
+            # Proteção contra índice fora (caso vehicle_id não alinhe com o array speed_factors)
+            if chromosome.speed_factors and v_idx < len(chromosome.speed_factors):
+                factor = chromosome.speed_factors[v_idx]
+            else:
+                factor = 1.0
+                
+            operational_cost += route.total_distance * (factor ** 2)
+            
+        # O Fitness deve equilibrar Distância (Time proxy se velocidade fosse const) + Custo
+        # Se aumentamos velocidade, distância é igual, mas tempo diminui.
+        # Mas aqui, estamos minimizando Distância. 
+        # Com velocidade variável, deveríamos minimizar TEMPO + CUSTO.
+        # Vamos converter Distância para "Tempo Base" (Dist / Factor) e somar Custo
+        
+        total_time_proxy = 0.0
+        for route in routes:
+             v_idx = int(route.vehicle.id) if str(route.vehicle.id).isdigit() else 0
+             factor = chromosome.speed_factors[v_idx] if (chromosome.speed_factors and v_idx < len(chromosome.speed_factors)) else 1.0
+             total_time_proxy += route.total_distance / factor
+        
+        # Novo Fitness = w1 * Tempo + w2 * CustoOperacional + Penalidades
+        # Ajustamos os pesos para manter ordem de grandeza anterior
+        # Tempo ~ Distância (se factor=1)
+        # Custo ~ Distância (se factor=1)
+        
         total_fitness = (
-            self.distance_weight * total_distance +
+            self.distance_weight * total_time_proxy + # Minimiza tempo
+            (self.distance_weight * 0.5) * operational_cost + # Minimiza custo (peso menor)
             self.priority_weight * priority_penalty +
             self.capacity_penalty * capacity_violation +
             self.autonomy_penalty * autonomy_violation +

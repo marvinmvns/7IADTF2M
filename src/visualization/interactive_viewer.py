@@ -42,7 +42,9 @@ from src.genetic_algorithm.genetic_algorithm import (
 from src.genetic_algorithm.selection import SelectionMethod
 from src.genetic_algorithm.crossover import CrossoverMethod
 from src.genetic_algorithm.mutation import MutationMethod
+from src.genetic_algorithm.mutation import MutationMethod
 from src.genetic_algorithm.fitness import FitnessType
+from src.controllers.experiment_manager import ExperimentManager
 
 
 # Cores
@@ -97,6 +99,8 @@ CROSSOVER_LABELS = {
     CrossoverMethod.SCX: "SCX (construtivo sequencial)",
     CrossoverMethod.OX2: "OX2 (baseado em ordem)",
     CrossoverMethod.POS: "POS (posicao)",
+    CrossoverMethod.ARITHMETIC: "Aritmetico (Velocidades)",
+    CrossoverMethod.HYBRID: "Hibrido (Rota + Velocidade)",
 }
 
 MUTATION_LABELS = {
@@ -105,9 +109,8 @@ MUTATION_LABELS = {
     MutationMethod.SCRAMBLE: "Embaralhar",
     MutationMethod.INSERT: "Insercao",
     MutationMethod.DISPLACEMENT: "Deslocamento",
-    MutationMethod.TWO_OPT: "2-opt",
-    MutationMethod.THREE_OPT: "3-opt",
-    MutationMethod.RSM: "Reversao de sequencia",
+    MutationMethod.GAUSSIAN: "Gaussiana (Velocidades)",
+    MutationMethod.HYBRID: "Hibrida (Rota + Velocidade)",
 }
 
 REPLACEMENT_LABELS = {
@@ -193,6 +196,17 @@ class InteractiveViewer:
         
         # Configuração do AG
         self.ga_config: Optional[GAConfig] = None
+        
+        # Gerenciador de Experimentos
+        try:
+            self.experiment_manager = ExperimentManager()
+        except Exception as e:
+            print(f"CRITICAL ERROR initializing ExperimentManager: {e}")
+            import traceback
+            traceback.print_exc()
+            self.experiment_manager = None
+            
+        self.current_exp_id = None
         self.ga: Optional[GeneticAlgorithm] = None
         self.vehicle_count = 3
         
@@ -224,10 +238,15 @@ class InteractiveViewer:
         self.active_scenario_index = 0
         
         # Limites do mapa
-        self.min_x = 0
-        self.max_x = 1
-        self.min_y = 0
         self.max_y = 1
+        
+        # Logo
+        self.logo_surface = None
+
+        # Gerenciador de Experimentos
+        self.manager = self.experiment_manager
+        self.current_experiment_id = None
+        self.start_time = None
     
     def setup(self, delivery_points: Optional[List[DeliveryPoint]] = None,
               depot_index: int = 0,
@@ -295,7 +314,7 @@ class InteractiveViewer:
         
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(
-            "Algoritmo Genético - Otimização de Rotas Hospitalares - São Paulo"
+            "Saudelog - Inteligência em Distribuição de Medicamentos"
         )
         
         self.clock = pygame.time.Clock()
@@ -326,6 +345,16 @@ class InteractiveViewer:
             except pygame.error:
                 self.background_map_surface = None
         
+        # Carrega Logo Saudelog
+        if os.path.exists("assets/logo.png"):
+            try:
+                logo_img = pygame.image.load("assets/logo.png").convert_alpha()
+                # Redimensiona mantendo proporção (ex: altura 80)
+                aspect_ratio = logo_img.get_width() / logo_img.get_height()
+                self.logo_surface = pygame.transform.smoothscale(logo_img, (int(80 * aspect_ratio), 80))
+            except pygame.error:
+                self.logo_surface = None
+                
         self.running = True
     
     def _create_ui(self):
@@ -870,7 +899,7 @@ class InteractiveViewer:
         
         # Verifica parada (respeita apenas o número de gerações configurado)
         if self.generation >= self.ga_config.max_generations:
-            self.state = ViewerState.FINISHED
+            self._stop_evolution()
     
     def _render(self):
         """Renderiza a interface."""
@@ -892,26 +921,36 @@ class InteractiveViewer:
     
     def _draw_header(self):
         """Desenha cabeçalho."""
+        x_offset = 20
+        # Logo se disponível
+        if self.logo_surface:
+            self.screen.blit(self.logo_surface, (30, 10))
+            x_offset = 30 + self.logo_surface.get_width() + 20
+            text_y_start = 10 + (self.logo_surface.get_height() // 2) - 30
+        else:
+            text_y_start = 15
+
         # Título
         title = self.fonts['title'].render(
-            "Otimização de Rotas - Distribuição de Medicamentos",
+            "Saudelog - Inteligência em Distribuição",
             True, SOFT_BLACK
         )
-        self.screen.blit(title, (20, 10))
+        self.screen.blit(title, (x_offset, text_y_start))
         
         # Subtítulo
         subtitle = self.fonts['medium'].render(
-            "Hospitais do Estado de São Paulo",
+            "Otimização de Rotas Hospitalares - São Paulo",
             True, SOFT_GRAY
         )
-        self.screen.blit(subtitle, (20, 40))
+        self.screen.blit(subtitle, (x_offset, text_y_start + 35))
         
         if self.scenario_names:
             scenario_text = self.fonts['normal'].render(
                 f"Cenário: {self.scenario_names[self.active_scenario_index]}",
                 True, SOFT_GRAY
             )
-            self.screen.blit(scenario_text, (20, 60))
+            # Move para baixo para não sobrepor com o logo
+            self.screen.blit(scenario_text, (20, 100))
         
         # Status
         status_colors = {
@@ -1258,13 +1297,57 @@ class InteractiveViewer:
             
             self.best_chromosome = self.ga._best_ever
             self.generation = 0
-            self.fitness_history = []
-            self.avg_fitness_history = []
-            self.diversity_history = []
-            self.km_initial = None
+            
+            # Inicializa histórico com o fitness inicial real
+            initial_stats = self.ga.population.calculate_stats()
+            print(f"DEBUG: Initial Stats Captured: {initial_stats.best_fitness}")
+            self.fitness_history = [initial_stats.best_fitness]
+            self.avg_fitness_history = [initial_stats.avg_fitness]
+            self.diversity_history = [initial_stats.diversity]
+            
+            self.km_initial = self._calculate_total_distance(self.best_chromosome)
             self.km_final = None
             
             self.state = ViewerState.RUNNING
+            self.start_time = time.time()
+            
+            # Cria registro do experimento
+            if self.manager:
+                try:
+                    # Monta config em dict (similar ao que a API recebe)
+                    # Precisamos serializar Enums
+                    config_dict = {
+                        "population_size": self.ga_config.population_size,
+                        "max_generations": self.ga_config.max_generations,
+                        "crossover_rate": self.ga_config.crossover_rate,
+                        "mutation_rate": self.ga_config.mutation_rate,
+                        "selection_method": self.ga_config.selection_method.value,
+                        "crossover_method": self.ga_config.crossover_method.value,
+                        "mutation_method": self.ga_config.mutation_method.value,
+                        "replacement_strategy": self.ga_config.replacement_strategy.value,
+                        "fitness_type": self.ga_config.fitness_type.value,
+                        "elite_size": self.ga_config.elite_size,
+                        "tournament_size": self.ga_config.tournament_size,
+                        "stagnation_limit": self.ga_config.stagnation_limit,
+                        "heuristic_init_ratio": self.ga_config.heuristic_init_ratio,
+                        "num_vehicles": self.vehicle_count,
+                        "vehicle_capacity": self.vehicle_capacity,
+                        "vehicle_max_distance": self.vehicle_max_distance,
+                        "vehicle_speed": self.vehicle_speed,
+                        "scenario": self.scenario_names[self.active_scenario_index] if self.scenario_names else "custom",
+                        # Pesos são fixos por enquanto ou poderiam vir da UI se implementado
+                        "w_distance": 1.0,
+                        "w_priority": 1.0, 
+                        "w_capacity": 1.0, 
+                        "w_time": 1.0
+                    }
+                    exp = self.manager.create_experiment(config_dict)
+                    self.current_experiment_id = exp.id
+                    # Atualiza status para running imediatamente
+                    self.manager.update_experiment_result(exp.id, {}, 0, 0, 0, status="running")
+                    print(f"Experimento visual iniciado: ID {exp.id}")
+                except Exception as e:
+                    print(f"Erro ao criar experimento: {e}")
         
         elif self.state == ViewerState.PAUSED:
             self.state = ViewerState.RUNNING
@@ -1280,6 +1363,44 @@ class InteractiveViewer:
         """Para a evolução."""
         if self.state in [ViewerState.RUNNING, ViewerState.PAUSED]:
             self.state = ViewerState.FINISHED
+        
+        # Salva resultados finais
+        if self.manager and self.current_experiment_id and self.ga:
+            try:
+                duration = time.time() - (self.start_time or time.time())
+                
+                # Prepara detalhes das rotas (igual ao que a API faz)
+                routes_info = []
+                if self.ga.get_best_solution():
+                    for r in self.ga.get_best_solution().get_routes():
+                        if hasattr(r, 'points'):
+                            points_ids = [p.id for p in r.points]
+                            routes_info.append({
+                                "vehicle_id": r.vehicle.id,
+                                "distance": r.total_distance,
+                                "demand": r.total_demand,
+                                "points": points_ids
+                            })
+
+                result_data = {
+                    "best_fitness": float(self.ga.get_best_solution().fitness),
+                    "generations_run": self.generation,
+                    "execution_time": duration,
+                    "routes": routes_info,
+                    "initial_fitness": self.fitness_history[0] if self.fitness_history else 0,
+                    "convergence_generation": self.ga._stagnation_counter
+                }
+
+                self.manager.complete_experiment(
+                    experiment_id=self.current_experiment_id,
+                    result=result_data
+                )
+                print(f"Experimento visual salvo: ID {self.current_experiment_id}")
+                self.current_experiment_id = None
+            except Exception as e:
+                print(f"Erro ao salvar resultados: {e}")
+                import traceback
+                traceback.print_exc()
     
     def _reset(self):
         """Reseta o visualizador."""
@@ -1295,18 +1416,16 @@ class InteractiveViewer:
         self.km_final = None
 
     def _create_vehicles(self) -> List[Vehicle]:
-        """Cria veículos padrão para a simulação."""
-        vehicles = []
-        for i in range(self.vehicle_count):
-            vehicles.append(
-                Vehicle(
-                    id=i,
-                    capacity=self.vehicle_capacity,
-                    max_distance=self.vehicle_max_distance,
-                    speed=self.vehicle_speed
-                )
+        """Cria lista de veículos."""
+        return [
+            Vehicle(
+                id=i,
+                capacity=self.vehicle_capacity,
+                max_distance=self.vehicle_max_distance,
+                speed=self.vehicle_speed
             )
-        return vehicles
+            for i in range(1, self.vehicle_count + 1)
+        ]
 
     def _calculate_total_distance(self, chromosome: Chromosome) -> float:
         """Calcula distância total da solução."""
@@ -1454,9 +1573,21 @@ class InteractiveViewer:
         else:
             dropdown.selected_option = value
 
-    def _label_for_enum(self, enum_value, label_map: Dict) -> str:
-        """Retorna rótulo em PT-BR para enum."""
-        return label_map.get(enum_value, enum_value.value)
+    def _label_for_enum(self, enum_value, label_map):
+        """Retorna o rótulo para um valor de enum (objeto ou string)."""
+        # Se for Enum e estiver no mapa
+        if enum_value in label_map:
+            return label_map[enum_value]
+        
+        # Se for string, tenta encontrar correspondência no mapa
+        if isinstance(enum_value, str):
+            for key, label in label_map.items():
+                if hasattr(key, 'value') and key.value == enum_value:
+                    return label
+            return enum_value
+            
+        # Fallback
+        return getattr(enum_value, 'value', str(enum_value))
 
     def _enum_from_label(self, label: str, label_map: Dict, enum_cls: Enum):
         """Retorna enum a partir do rótulo em PT-BR."""

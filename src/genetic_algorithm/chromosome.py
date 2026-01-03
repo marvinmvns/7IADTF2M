@@ -272,7 +272,8 @@ class Chromosome:
     def __init__(self, genes: List[int], 
                  delivery_points: Optional[List[DeliveryPoint]] = None,
                  vehicles: Optional[List[Vehicle]] = None,
-                 depot_index: int = 0):
+                 depot_index: int = 0,
+                 speed_factors: Optional[List[float]] = None):
         """
         Inicializa um cromossomo.
         
@@ -281,11 +282,14 @@ class Chromosome:
             delivery_points: Lista de pontos de entrega disponíveis
             vehicles: Lista de veículos disponíveis
             depot_index: Índice do ponto que serve como depósito
+            speed_factors: Fatores de velocidade para cada veículo (Híbrido)
         """
         self.genes = genes
         self.delivery_points = delivery_points or []
         self.vehicles = vehicles or [Vehicle(id=0)]
         self.depot_index = depot_index
+        # Se não fornecido, assume velocidade normal (1.0)
+        self.speed_factors = speed_factors or [1.0] * len(self.vehicles)
         self._fitness: Optional[float] = None
         self._routes: Optional[List[Route]] = None
     
@@ -310,10 +314,16 @@ class Chromosome:
         indices = [i for i in range(num_points + 1) if i != depot_index]
         random.shuffle(indices)
         
+        # HIBRIDO: Gera fatores de velocidade aleatórios (0.5 a 1.5)
+        # Um para cada veículo
+        num_vehicles = len(vehicles) if vehicles else 1
+        speed_factors = [random.uniform(0.5, 1.5) for _ in range(num_vehicles)]
+        
         return cls(genes=indices, 
                    delivery_points=delivery_points,
                    vehicles=vehicles,
-                   depot_index=depot_index)
+                   depot_index=depot_index,
+                   speed_factors=speed_factors)
     
     @classmethod
     def create_nearest_neighbor(cls, num_points: int,
@@ -452,7 +462,8 @@ class Chromosome:
             genes=self.genes.copy(),
             delivery_points=self.delivery_points,
             vehicles=self.vehicles,
-            depot_index=self.depot_index
+            depot_index=self.depot_index,
+            speed_factors=self.speed_factors.copy() if self.speed_factors else None
         )
         new_chromosome._fitness = self._fitness
         return new_chromosome
