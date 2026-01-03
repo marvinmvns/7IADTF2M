@@ -1449,16 +1449,20 @@ class InteractiveViewer:
 
                     # Monta config em dict (similar ao que a API recebe)
                     # Precisamos serializar Enums
+                    # Helper seguro para obter valor
+                    def get_val(obj):
+                        return obj.value if hasattr(obj, 'value') else obj
+
                     config_dict = {
                         "population_size": self.ga_config.population_size,
                         "max_generations": self.ga_config.max_generations,
                         "crossover_rate": self.ga_config.crossover_rate,
                         "mutation_rate": self.ga_config.mutation_rate,
-                        "selection_method": self.ga_config.selection_method.value,
-                        "crossover_method": self.ga_config.crossover_method.value,
-                        "mutation_method": self.ga_config.mutation_method.value,
-                        "replacement_strategy": self.ga_config.replacement_strategy.value,
-                        "fitness_type": self.ga_config.fitness_type.value,
+                        "selection_method": get_val(self.ga_config.selection_method),
+                        "crossover_method": get_val(self.ga_config.crossover_method),
+                        "mutation_method": get_val(self.ga_config.mutation_method),
+                        "replacement_strategy": get_val(self.ga_config.replacement_strategy),
+                        "fitness_type": get_val(self.ga_config.fitness_type),
                         "elite_size": self.ga_config.elite_size,
                         "tournament_size": self.ga_config.tournament_size,
                         "stagnation_limit": self.ga_config.stagnation_limit,

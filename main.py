@@ -54,7 +54,7 @@ from src.genetic_algorithm.genetic_algorithm import (
 )
 from data.hospitais_sp import (
     get_all_hospitals, get_depot, scenario_small, scenario_medium,
-    scenario_large, HospitalData, DEPOSITO_CENTRAL
+    scenario_large, scenario_critical_only, HospitalData, DEPOSITO_CENTRAL
 )
 from src.controllers.experiment_manager import ExperimentManager
 
@@ -273,6 +273,7 @@ def run_with_visualization(custom_config: Optional[GAConfig] = None):
         ("Pequeno", create_delivery_points(scenario_small())),
         ("Médio", create_delivery_points(scenario_medium())),
         ("Grande", create_delivery_points(scenario_large())),
+        ("Crítico", create_delivery_points(scenario_critical_only())),
     ]
     
     # Configura AG

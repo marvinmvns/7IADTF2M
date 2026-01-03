@@ -1,0 +1,101 @@
+version: '3.8'
+
+# Docker Compose alternativo para ambientes SEM GPU
+# Use este arquivo se não tiver GPU NVIDIA disponível
+# Comando: docker-compose -f docker/docker-compose.cpu.yml up
+
+services:
+  # ==================== API FastAPI ====================
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ga-vrp-api
+    environment:
+      - SERVICE_TYPE=api
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data:/app/data
+      - ../docs:/app/docs
+      - api-cache:/root/.cache
+    networks:
+      - ga-vrp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.fiap.service=api"
+      - "com.fiap.description=FastAPI REST API"
+
+  # ==================== Streamlit Web Interface ====================
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ga-vrp-web
+    environment:
+      - SERVICE_TYPE=web
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../data:/app/data
+      - ../assets:/app/assets
+      - web-cache:/root/.cache
+    networks:
+      - ga-vrp-network
+    depends_on:
+      - api
+    restart: unless-stopped
+    labels:
+      - "com.fiap.service=web"
+      - "com.fiap.description=Streamlit Dashboard"
+
+  # ==================== Ollama with Gemma3 (CPU only) ====================
+  ollama:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ollama
+    container_name: ga-vrp-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - ga-vrp-network
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    labels:
+      - "com.fiap.service=ollama"
+      - "com.fiap.description=Ollama LLM Server with Gemma3 (CPU mode)"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# ==================== Volumes ====================
+volumes:
+  ollama-models:
+    driver: local
+    labels:
+      - "com.fiap.description=Ollama models storage"
+  api-cache:
+    driver: local
+  web-cache:
+    driver: local
+
+# ==================== Networks ====================
+networks:
+  ga-vrp-network:
+    driver: bridge
+    labels:
+      - "com.fiap.description=GA VRP internal network"

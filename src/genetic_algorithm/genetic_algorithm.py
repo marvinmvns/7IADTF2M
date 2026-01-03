@@ -207,6 +207,18 @@ class GeneticAlgorithm:
         self.population.evaluate(self.fitness_func.evaluate)
         self._best_ever = self.population.get_best().copy()
         self.initial_best_fitness = self._best_ever.fitness
+        
+        # Capture initial detailed metrics
+        initial_components = self.fitness_func.get_components(self._best_ever)
+        self.initial_total_distance = initial_components.total_distance
+        self.initial_components_dict = {
+            'total_distance': initial_components.total_distance,
+            'priority_penalty': initial_components.priority_penalty,
+            'capacity_violation': initial_components.capacity_violation,
+            'autonomy_violation': initial_components.autonomy_violation,
+            'time_window_violation': initial_components.time_window_violation
+        }
+        
         convergence_gen = 0
         
         if self.config.verbose:
@@ -376,7 +388,15 @@ class GeneticAlgorithm:
         details = {
             'fitness': self._best_ever.fitness,
             'initial_fitness': getattr(self, 'initial_best_fitness', None),
+            'initial_components': getattr(self, 'initial_components_dict', {}),
             'total_distance': components.total_distance,
+            'final_components': {
+                'total_distance': components.total_distance,
+                'priority_penalty': components.priority_penalty,
+                'capacity_violation': components.capacity_violation,
+                'autonomy_violation': components.autonomy_violation,
+                'time_window_violation': components.time_window_violation
+            },
             'num_routes': len(routes),
             'history_summary': history_summary,
             'routes': []

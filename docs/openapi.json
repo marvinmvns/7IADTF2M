@@ -1,0 +1,850 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Genetic Algorithm VRP Optimization API",
+    "description": "\n# API de Otimização de Rotas com Algoritmo Genético\n\nAPI RESTful para otimização de rotas de entrega de medicamentos e suprimentos para hospitais usando Algoritmos Genéticos.\n\n## Características\n\n* **24 Operadores Genéticos**: 8 métodos de seleção, 8 operadores de crossover, 8 operadores de mutação\n* **Multi-objetivo**: Otimiza distância, prioridades, capacidade e autonomia\n* **Dados Reais**: Baseado em coordenadas de hospitais de São Paulo\n* **Execução Assíncrona**: Experimentos executam em background\n* **Persistência**: Histórico completo em SQLite\n\n## Cenários Disponíveis\n\n* `small`: ~10 hospitais, 2 veículos (testes rápidos)\n* `medium`: ~20 hospitais, 3 veículos (padrão)\n* `large`: Todos hospitais, 4-5 veículos (computacionalmente intensivo)\n* `critical`: Apenas entregas críticas/urgentes\n\n## Tecnologias\n\n* FastAPI + Uvicorn\n* SQLAlchemy + SQLite\n* NumPy + Pandas\n* Pydantic para validação\n    ",
+    "contact": {
+      "name": "FIAP Tech Challenge - Fase 2",
+      "email": "contato@example.com"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/run": {
+      "post": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Criar e executar novo experimento",
+        "description": "Cria um novo experimento de otimização de rotas e inicia sua execução em background.\n\n    O experimento será executado de forma assíncrona. Use os endpoints de consulta para\n    acompanhar o progresso e obter resultados.\n\n    **Fluxo de execução:**\n    1. Valida configuração recebida\n    2. Cria registro no banco de dados (status: pending)\n    3. Inicia processamento em background\n    4. Retorna ID para consulta posterior\n\n    **Tempo estimado de execução:**\n    - Small scenario: 10-30 segundos\n    - Medium scenario: 30-90 segundos\n    - Large scenario: 2-5 minutos",
+        "operationId": "run_experiment_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Experimento criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentResponse"
+                },
+                "example": {
+                  "id": 42,
+                  "status": "pending",
+                  "message": "Experimento iniciado."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro de validação nos parâmetros"
+          },
+          "500": {
+            "description": "Erro interno do servidor"
+          }
+        }
+      }
+    },
+    "/experiments": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Listar todos os experimentos",
+        "description": "Retorna lista de todos os experimentos executados, ordenados por data de criação (mais recentes primeiro).\n\n    Cada experimento contém:\n    - **id**: Identificador único\n    - **created_at**: Data/hora de criação\n    - **status**: pending, running, completed, failed\n    - **config**: Configuração utilizada\n    - **best_fitness**: Melhor fitness obtido (se concluído)\n    - **generations_run**: Gerações executadas\n    - **execution_time**: Tempo de execução em segundos\n    - **result_details**: Rotas e detalhes da solução",
+        "operationId": "list_experiments_experiments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Experiments Experiments Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/experiments/latest": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Obter último experimento",
+        "description": "Retorna o experimento mais recente executado no sistema.",
+        "operationId": "get_latest_experiment_experiments_latest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/experiments/{experiment_id}": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Obter detalhes de experimento específico",
+        "description": "Retorna todos os detalhes de um experimento pelo seu ID.",
+        "operationId": "get_experiment_experiments__experiment_id__get",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Experimento encontrado",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Experimento não encontrado"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Deletar experimento específico",
+        "description": "Remove um experimento específico pelo seu ID.",
+        "operationId": "delete_experiment_experiments__experiment_id__delete",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Experimento removido com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Experimento não encontrado"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/experiments/all": {
+      "delete": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Limpar todo histórico de experimentos",
+        "description": "**ATENÇÃO:** Remove TODOS os experimentos do banco de dados. Esta operação é irreversível.\n\n    Use este endpoint para limpar o histórico completo de experimentos.",
+        "operationId": "delete_all_experiments_experiments_all_delete",
+        "responses": {
+          "200": {
+            "description": "Histórico limpo com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao limpar histórico"
+          }
+        }
+      }
+    },
+    "/experiments/failed": {
+      "delete": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Remover experimentos falhados",
+        "description": "Remove apenas os experimentos com status 'failed', mantendo os demais intactos.",
+        "operationId": "delete_failed_experiments_experiments_failed_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scenarios/{scenario_name}": {
+      "get": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "Visualizar dados do cenário",
+        "description": "Retorna os dados completos de um cenário (hospitais, coordenadas, demandas, prioridades).\n\n    Útil para preview antes de executar experimento.\n\n    **Cenários disponíveis:**\n    - `small`: ~10 hospitais\n    - `medium`: ~20 hospitais\n    - `large`: Todos os hospitais (~50+)\n    - `critical`: Apenas entregas críticas/urgentes",
+        "operationId": "get_scenario_preview_scenarios__scenario_name__get",
+        "parameters": [
+          {
+            "name": "scenario_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do cenário",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Cenário inválido ou erro ao carregar"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/defaults": {
+      "get": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Obter configuração padrão",
+        "description": "Retorna os valores padrão recomendados para todos os parâmetros de configuração.\n\n    Use este endpoint para:\n    - Inicializar formulários de configuração\n    - Resetar configurações para valores padrão\n    - Entender valores recomendados",
+        "operationId": "get_default_config_config_defaults_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/options": {
+      "get": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Obter opções de configuração disponíveis",
+        "description": "Retorna todas as opções válidas para campos de configuração (enums, cenários, etc.).\n\n    Útil para:\n    - Construir dropdowns/selects em UIs\n    - Validar inputs antes de enviar\n    - Descobrir operadores genéticos disponíveis\n\n    **Retorna:**\n    - `scenarios`: Lista de cenários válidos\n    - `selection_methods`: 8 métodos de seleção disponíveis\n    - `crossover_methods`: 8 operadores de crossover\n    - `mutation_methods`: 8 operadores de mutação\n    - `replacement_strategies`: Estratégias de substituição\n    - `fitness_types`: Tipos de função fitness",
+        "operationId": "get_config_options_config_options_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health check",
+        "description": "Verifica se a API está funcionando corretamente.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CrossoverMethod": {
+        "type": "string",
+        "enum": [
+          "partially_mapped_crossover",
+          "order_crossover",
+          "cycle_crossover",
+          "alternating_edges_crossover",
+          "edge_recombination_crossover",
+          "sequential_constructive_crossover",
+          "order_based_crossover",
+          "position_based_crossover",
+          "arithmetic",
+          "hybrid"
+        ],
+        "title": "CrossoverMethod",
+        "description": "Enumeração dos métodos de crossover disponíveis."
+      },
+      "DeleteResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Mensagem de confirmação"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteResponse",
+        "description": "Resposta de operação de deleção",
+        "example": {
+          "message": "Experimento 42 removido"
+        }
+      },
+      "ExperimentConfig": {
+        "properties": {
+          "population_size": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 10.0,
+            "title": "Population Size",
+            "description": "Tamanho da população (10-500)",
+            "default": 100,
+            "examples": [
+              50,
+              100,
+              200
+            ]
+          },
+          "max_generations": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 10.0,
+            "title": "Max Generations",
+            "description": "Número máximo de gerações (10-1000)",
+            "default": 200,
+            "examples": [
+              100,
+              200,
+              500
+            ]
+          },
+          "crossover_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Crossover Rate",
+            "description": "Taxa de crossover (0.0-1.0). Recomendado: 0.8-0.95",
+            "default": 0.9,
+            "examples": [
+              0.8,
+              0.9,
+              0.95
+            ]
+          },
+          "mutation_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Mutation Rate",
+            "description": "Taxa de mutação (0.0-1.0). Recomendado: 0.05-0.2",
+            "default": 0.15,
+            "examples": [
+              0.05,
+              0.1,
+              0.15
+            ]
+          },
+          "selection_method": {
+            "$ref": "#/components/schemas/SelectionMethod",
+            "description": "Método de seleção: TOURNAMENT, ROULETTE, RANKING, TRUNCATION, ELITIST, SUS, BOLTZMANN, STEADY_STATE",
+            "default": "tournament"
+          },
+          "crossover_method": {
+            "$ref": "#/components/schemas/CrossoverMethod",
+            "description": "Operador de crossover: PMX, OX, CX, AEX, ERX, SCX, OX2, POS",
+            "default": "order_crossover"
+          },
+          "mutation_method": {
+            "$ref": "#/components/schemas/MutationMethod",
+            "description": "Operador de mutação: SWAP, INVERSION, SCRAMBLE, INSERT, DISPLACEMENT, TWO_OPT, THREE_OPT, RSM",
+            "default": "inversion"
+          },
+          "replacement_strategy": {
+            "$ref": "#/components/schemas/ReplacementStrategy",
+            "description": "Estratégia de substituição: GENERATIONAL, STEADY_STATE, ELITIST",
+            "default": "elitist"
+          },
+          "fitness_type": {
+            "$ref": "#/components/schemas/FitnessType",
+            "description": "Tipo de função fitness: WEIGHTED_MULTI, LEXICOGRAPHIC, PARETO",
+            "default": "weighted_multi_objective"
+          },
+          "tournament_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 2.0,
+            "title": "Tournament Size",
+            "description": "Tamanho do torneio para Tournament Selection (2-10)",
+            "default": 3,
+            "examples": [
+              2,
+              3,
+              5
+            ]
+          },
+          "elite_size": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Elite Size",
+            "description": "Número de indivíduos elitistas a preservar (0-20)",
+            "default": 2,
+            "examples": [
+              1,
+              2,
+              5
+            ]
+          },
+          "truncation_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Truncation Threshold",
+            "description": "Limiar de truncamento para Truncation Selection (0.0-1.0)",
+            "default": 0.5,
+            "examples": [
+              0.3,
+              0.5,
+              0.7
+            ]
+          },
+          "boltzmann_temperature": {
+            "type": "number",
+            "minimum": 0.1,
+            "title": "Boltzmann Temperature",
+            "description": "Temperatura inicial para Boltzmann Selection",
+            "default": 100.0,
+            "examples": [
+              50.0,
+              100.0,
+              200.0
+            ]
+          },
+          "steady_state_ratio": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Steady State Ratio",
+            "description": "Taxa de substituição para Steady State Selection (0.0-1.0)",
+            "default": 0.2,
+            "examples": [
+              0.1,
+              0.2,
+              0.3
+            ]
+          },
+          "num_vehicles": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Num Vehicles",
+            "description": "Número de veículos disponíveis (1-10)",
+            "default": 3,
+            "examples": [
+              2,
+              3,
+              5
+            ]
+          },
+          "vehicle_capacity": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Vehicle Capacity",
+            "description": "Capacidade de carga do veículo (kg ou unidades)",
+            "default": 100.0,
+            "examples": [
+              50.0,
+              100.0,
+              150.0
+            ]
+          },
+          "vehicle_speed": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Vehicle Speed",
+            "description": "Velocidade média do veículo (km/h)",
+            "default": 40.0,
+            "examples": [
+              30.0,
+              40.0,
+              60.0
+            ]
+          },
+          "vehicle_max_distance": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Vehicle Max Distance",
+            "description": "Autonomia máxima do veículo (km)",
+            "default": 200.0,
+            "examples": [
+              150.0,
+              200.0,
+              300.0
+            ]
+          },
+          "scenario": {
+            "type": "string",
+            "pattern": "^(small|medium|large|critical|custom)$",
+            "title": "Scenario",
+            "description": "Cenário de teste: small (~10 hospitais), medium (~20), large (todos), critical (entregas críticas)",
+            "default": "large",
+            "examples": [
+              "small",
+              "medium",
+              "large"
+            ]
+          },
+          "w_distance": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "W Distance",
+            "description": "Peso da distância total percorrida na função fitness",
+            "default": 1.0,
+            "examples": [
+              0.5,
+              1.0,
+              2.0
+            ]
+          },
+          "w_priority": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "W Priority",
+            "description": "Peso da penalidade de prioridade (entregas críticas não atendidas cedo)",
+            "default": 10.0,
+            "examples": [
+              5.0,
+              10.0,
+              50.0
+            ]
+          },
+          "w_capacity": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "W Capacity",
+            "description": "Peso da penalidade de violação de capacidade",
+            "default": 100.0,
+            "examples": [
+              50.0,
+              100.0,
+              200.0
+            ]
+          },
+          "w_autonomy": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "W Autonomy",
+            "description": "Peso da penalidade de violação de autonomia",
+            "default": 100.0,
+            "examples": [
+              50.0,
+              100.0,
+              200.0
+            ]
+          },
+          "w_window": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "W Window",
+            "description": "Peso da penalidade de janela de tempo",
+            "default": 50.0,
+            "examples": [
+              20.0,
+              50.0,
+              100.0
+            ]
+          },
+          "stagnation_limit": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 5.0,
+            "title": "Stagnation Limit",
+            "description": "Limite de gerações consecutivas sem melhoria antes de parar (5-200)",
+            "default": 50,
+            "examples": [
+              30,
+              50,
+              100
+            ]
+          },
+          "heuristic_init_ratio": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Heuristic Init Ratio",
+            "description": "Proporção da população inicial gerada com heurística nearest-neighbor (0.0-1.0)",
+            "default": 0.2,
+            "examples": [
+              0.0,
+              0.2,
+              0.5
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ExperimentConfig",
+        "description": "Configuração completa de um experimento de otimização",
+        "example": {
+          "crossover_method": "OX",
+          "crossover_rate": 0.9,
+          "elite_size": 2,
+          "fitness_type": "WEIGHTED_MULTI",
+          "heuristic_init_ratio": 0.2,
+          "max_generations": 200,
+          "mutation_method": "INVERSION",
+          "mutation_rate": 0.15,
+          "num_vehicles": 3,
+          "population_size": 100,
+          "replacement_strategy": "ELITIST",
+          "scenario": "medium",
+          "selection_method": "TOURNAMENT",
+          "stagnation_limit": 50,
+          "tournament_size": 3,
+          "vehicle_capacity": 100.0,
+          "vehicle_max_distance": 200.0,
+          "vehicle_speed": 40.0,
+          "w_autonomy": 100.0,
+          "w_capacity": 100.0,
+          "w_distance": 1.0,
+          "w_priority": 10.0,
+          "w_window": 50.0
+        }
+      },
+      "ExperimentResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "ID único do experimento"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Status: pending, running, completed, failed"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Mensagem descritiva"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "message"
+        ],
+        "title": "ExperimentResponse",
+        "description": "Resposta de criação de experimento",
+        "example": {
+          "id": 42,
+          "message": "Experimento iniciado.",
+          "status": "pending"
+        }
+      },
+      "FitnessType": {
+        "type": "string",
+        "enum": [
+          "distance_only",
+          "weighted_multi_objective",
+          "penalty_based",
+          "priority_aware"
+        ],
+        "title": "FitnessType",
+        "description": "Tipos de função de fitness disponíveis."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MutationMethod": {
+        "type": "string",
+        "enum": [
+          "swap",
+          "inversion",
+          "scramble",
+          "insert",
+          "displacement",
+          "gaussian",
+          "hybrid",
+          "2-opt",
+          "3-opt",
+          "reverse_sequence"
+        ],
+        "title": "MutationMethod",
+        "description": "Enumeração dos métodos de mutação disponíveis."
+      },
+      "ReplacementStrategy": {
+        "type": "string",
+        "enum": [
+          "generational",
+          "steady_state",
+          "elitist"
+        ],
+        "title": "ReplacementStrategy",
+        "description": "Estratégias de substituição da população."
+      },
+      "SelectionMethod": {
+        "type": "string",
+        "enum": [
+          "roulette_wheel",
+          "tournament",
+          "rank",
+          "truncation",
+          "elitist",
+          "stochastic_universal_sampling",
+          "boltzmann",
+          "steady_state"
+        ],
+        "title": "SelectionMethod",
+        "description": "Enumeração dos métodos de seleção disponíveis."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "experiments",
+      "description": "Operações de criação, consulta e gerenciamento de experimentos"
+    },
+    {
+      "name": "scenarios",
+      "description": "Consulta de cenários e dados de hospitais"
+    },
+    {
+      "name": "configuration",
+      "description": "Configurações padrão e opções disponíveis"
+    }
+  ]
+}

@@ -215,16 +215,17 @@ if page == "Dashboard":
         
         if not experiments.empty:
             # === PREPARAÇÃO DE DADOS (Moved Up) ===
+            # === PREPARAÇÃO DE DADOS (Moved Up) ===
             def get_fitness_label(config):
                 if not isinstance(config, dict): return "🧬 Padrão"
                 ftype = config.get('fitness_type', 'N/A')
                 mapping = {
-                    "weighted_multi_objective": "⚖️ Multiobjetivo",
-                    "distance_only": "📏 Distância",
-                    "penalty_based": "⚠️ Penalidades",
-                    "priority_aware": "🚨 Prioridade"
+                    "weighted_multi_objective": "⚖️ Multiobjetivo Ponderado",
+                    "distance_only": "📏 Apenas Distância",
+                    "penalty_based": "⚠️ Baseado em Penalidades",
+                    "priority_aware": "🚨 Foco em Prioridade"
                 }
-                return mapping.get(ftype, ftype)
+                return mapping.get(ftype, ftype.replace("_", " ").title())
 
             experiments['fitness'] = experiments['config'].apply(get_fitness_label)
 
@@ -661,12 +662,28 @@ elif page == "Nova Execução":
 
         with tab4:
             st.info("Ajuste a importância de cada objetivo na função de fitness.")
-            fitness_opts = config_opts.get("fitness_types", ["weighted_multi_objective"])
+            # Mapeamento reverso para exibição amigável
+            fitness_mapping = {
+                "weighted_multi_objective": "⚖️ Multiobjetivo Ponderado",
+                "distance_only": "📏 Apenas Distância",
+                "penalty_based": "⚠️ Baseado em Penalidades",
+                "priority_aware": "🚨 Foco em Prioridade"
+            }
+            
+            fitness_opts_keys = config_opts.get("fitness_types", ["weighted_multi_objective"])
+            fitness_opts_labels = [fitness_mapping.get(k, k.replace('_', ' ').title()) for k in fitness_opts_keys]
+            
             try:
-                fitness_idx = fitness_opts.index(defaults.get("fitness_type", "weighted_multi_objective"))
+                current_ft = defaults.get("fitness_type", "weighted_multi_objective")
+                fitness_idx = fitness_opts_keys.index(current_ft)
             except:
                 fitness_idx = 0
-            fitness_type = st.selectbox("Tipo de Fitness", fitness_opts, index=fitness_idx)
+                
+            selected_label = st.selectbox("Tipo de Fitness", fitness_opts_labels, index=fitness_idx)
+            
+            # Recupera a chave original para usar na config
+            # Assumindo que a ordem é preservada ou buscando por valor
+            fitness_type = fitness_opts_keys[fitness_opts_labels.index(selected_label)]
             
             if fitness_type == "weighted_multi_objective":
                 c1, c2 = st.columns(2)
@@ -1296,7 +1313,207 @@ elif page == "Gerador Logístico":
                             vehicle_routes[r.get('vehicle_id', 0)].append(r)
                         
                         st.divider()
-                        
+
+                        # --- COMPARAÇÃO DE EFICIÊNCIA ---
+                        if st.button("📊 Comparar Eficiência (Baseline vs Otimizado)", type="secondary", use_container_width=True):
+                            st.markdown("### 📉 Relatório de Eficiência por Algoritmo")
+                            
+                            try:
+                                # Agrupa experimentos por Tipo de Fitness e Cenário
+                                from collections import defaultdict
+                                fitness_groups = defaultdict(list)
+                                
+                                for e in completed:
+                                    # Normaliza chave
+                                    cfg = e.get('config', {})
+                                    f_type = cfg.get('fitness_type', 'N/A')
+                                    # Corrige bug de scenario_name vs scenario
+                                    scen_name = cfg.get('scenario_name') or cfg.get('scenario') or 'large'
+                                    
+                                    # Chave composta
+                                    fitness_groups[(f_type, scen_name)].append(e)
+                                
+                                # Reorganiza dados para exibição por Fitness
+                                from collections import defaultdict
+                                display_by_fitness = defaultdict(list)
+                                
+                                for (f_type, scen_name), exps in fitness_groups.items():
+                                    # 1. Processamento das métricas (mantido igual)
+                                    best_ever_fitness = min(e.get('best_fitness', 999999) for e in exps)
+                                    
+                                    total_gain_pct = 0
+                                    total_km_saved = 0
+                                    num_valid_dist = 0
+                                    
+                                    for e in exps:
+                                        details = e.get('result_details', {})
+                                        if not isinstance(details, dict): details = {}
+                                        
+                                        init_fit = details.get('initial_fitness', 0.0)
+                                        final_fit = e.get('best_fitness', 0.0)
+                                        init_dist = details.get('initial_total_distance')
+                                        final_dist = details.get('total_distance')
+                                        
+                                        if init_dist is None: init_dist = 0.0
+                                        if final_dist is None: final_dist = 0.0
+                                        
+                                        if f_type == 'distance_only':
+                                            init_dist = init_fit
+                                            final_fit = e.get('best_fitness', 0.0)
+                                            final_dist = final_fit
+                                        
+                                        km_saved = 0.0
+                                        if init_dist > 0 and final_dist > 0:
+                                            km_saved = init_dist - final_dist
+                                            total_km_saved += km_saved
+                                            num_valid_dist += 1
+                                            
+                                        gain_pct = 0.0
+                                        if init_fit > 0:
+                                            gain_pct = ((init_fit - final_fit) / init_fit) * 100
+                                        total_gain_pct += gain_pct
+                                    
+                                    avg_gain = total_gain_pct / len(exps) if exps else 0
+                                    avg_km = total_km_saved / num_valid_dist if num_valid_dist > 0 else 0
+                                    
+                                    avg_final_fitness = sum(e.get('best_fitness', 0) for e in exps) / len(exps)
+                                    gap_to_uptimal = 0.0
+                                    if best_ever_fitness > 0:
+                                        gap_to_uptimal = ((avg_final_fitness - best_ever_fitness) / best_ever_fitness) * 100
+                                    
+                                    # Traduz nome do fitness para agrupamento
+                                    fitness_mapping_pt = {
+                                        "weighted_multi_objective": "⚖️ Multiobjetivo Ponderado",
+                                        "distance_only": "📏 Apenas Distância",
+                                        "penalty_based": "⚠️ Baseado em Penalidades",
+                                        "priority_aware": "🚨 Foco em Prioridade"
+                                    }
+                                    fitness_pt_name = fitness_mapping_pt.get(f_type, f_type.replace('_', ' ').title())
+                                    
+                                    # Dados base
+                                    row_data = {
+                                        "Cenário": scen_name.title(),
+                                        "Execuções": len(exps),
+                                        "Melhor Histórico (Fit)": f"{best_ever_fitness:.2f}",
+                                        "Economia Média (KM)": f"{avg_km:.1f} km",
+                                        "Gap vs Melhor (%)": f"{gap_to_uptimal:.1f}%"
+                                    }
+                                    
+                                    # Lógica de Métricas Específicas
+                                    specific_metric_val = 0.0
+                                    specific_metric_name = None
+                                    
+                                    if f_type == 'priority_aware':
+                                        # Calcula redução de penalidade de prioridade
+                                        total_prio_improv = 0
+                                        count = 0
+                                        for e in exps:
+                                            d = e.get('result_details', {})
+                                            if not isinstance(d, dict): continue
+                                            init_c = d.get('initial_components', {})
+                                            final_c = d.get('final_components', {})
+                                            
+                                            i_prio = init_c.get('priority_penalty', 0)
+                                            f_prio = final_c.get('priority_penalty', 0)
+                                            
+                                            if i_prio > 0:
+                                                total_prio_improv += ((i_prio - f_prio) / i_prio) * 100
+                                                count += 1
+                                        
+                                        if count > 0:
+                                            specific_metric_val = total_prio_improv / count
+                                            row_data["Melhoria Prioridade (%)"] = f"{specific_metric_val:.1f}%"
+                                        else:
+                                            row_data["Melhoria Prioridade (%)"] = "-"
+
+                                    elif f_type == 'penalty_based':
+                                        # Calcula redução de violações (Capacity + Autonomy)
+                                        total_viol_improv = 0
+                                        count = 0
+                                        for e in exps:
+                                            d = e.get('result_details', {})
+                                            if not isinstance(d, dict): continue
+                                            init_c = d.get('initial_components', {})
+                                            final_c = d.get('final_components', {})
+                                            
+                                            i_viol = init_c.get('capacity_violation', 0) + init_c.get('autonomy_violation', 0)
+                                            f_viol = final_c.get('capacity_violation', 0) + final_c.get('autonomy_violation', 0)
+                                            
+                                            if i_viol > 0:
+                                                total_viol_improv += ((i_viol - f_viol) / i_viol) * 100
+                                                count += 1
+                                        
+                                        if count > 0:
+                                            specific_metric_val = total_viol_improv / count
+                                            row_data["Redução de Violações (%)"] = f"{specific_metric_val:.1f}%"
+                                        else:
+                                            row_data["Redução de Violações (%)"] = "-"
+                                    
+                                    # Adiciona à lista do grupo
+                                    display_by_fitness[fitness_pt_name].append(row_data)
+
+                                # Renderiza uma tabela por Fitness Type
+                                if display_by_fitness:
+                                    for fitness_name in sorted(display_by_fitness.keys()):
+                                        st.subheader(fitness_name)
+                                        
+                                        # Ordena por cenrio
+                                        rows = sorted(display_by_fitness[fitness_name], key=lambda x: x['Cenário'])
+                                        
+                                        # Configuração Dinâmica de Colunas
+                                        col_config = {}
+                                        
+                                        # Adiciona config para colunas específicas se existirem
+                                        if "Melhoria Prioridade (%)" in rows[0]:
+                                             col_config["Melhoria Prioridade (%)"] = st.column_config.ProgressColumn(
+                                                "Melhoria Prioridade (%)",
+                                                format="%s",
+                                                min_value=0,
+                                                max_value=100
+                                            )
+                                        if "Redução de Violações (%)" in rows[0]:
+                                             col_config["Redução de Violações (%)"] = st.column_config.ProgressColumn(
+                                                "Redução de Violações (%)",
+                                                format="%s",
+                                                min_value=0,
+                                                max_value=100
+                                            )
+                                        
+                                        st.dataframe(
+                                            rows, 
+                                            hide_index=True, 
+                                            use_container_width=True,
+                                            column_config=col_config
+                                        )
+                                else:
+                                    st.warning("Nenhum dado comparável encontrado.")
+                                    
+                                st.info(
+                                    """
+                                    ℹ️ **Entenda os Dados:**
+                                    
+                                    **Métricas Gerais:**
+                                    - **Economia Média (KM)**: Quantos quilômetros foram economizados em média por execução.
+                                    - **Melhor Histórico**: O melhor valor de fitness já alcançado com este algoritmo.
+                                    - **Gap vs Melhor**: Diferença percentual entre a média das execuções e o recorde histórico (quanto menor, mais consistente).
+                                    
+                                    **Cenários (Complexidade):**
+                                    - **Small**: Cenário pequeno, ideal para testes rápidos (poucos pontos de entrega).
+                                    - **Medium**: Complexidade média, representa uma operação padrão.
+                                    - **Large**: Cenário de alta escala com muitos pontos, exigindo maior esforço computacional.
+                                    - **Critical**: Cenário focado em alta densidade de entregas críticas/urgentes, testando a capacidade de priorização do algoritmo.
+                                    
+                                    **Variáveis Consideradas por Fitness:**
+                                    - **⚖️ Multiobjetivo Ponderado**: Considera Distância Total, Penalidade de Prioridade, Violação de Capacidade, Violação de Autonomia e Janelas de Tempo. Pondera todos esses fatores para encontrar um equilíbrio.
+                                    - **🚨 Foco em Prioridade**: Foca na minimização do tempo de chegada para entregas de alta prioridade (Críticas e Urgentes). O atraso em itens críticos é penalizado severamente.
+                                    - **📏 Apenas Distância**: Considera exclusivamente a minimização da Distância Total percorrida (KM), ignorando capacidades ou prioridades (ideal para TSPs puros).
+                                    - **⚠️ Baseado em Penalidades**: Começa permitindo soluções inválidas e aumenta a penalidade por violações (Capacidade, Autonomia) gradualmente a cada geração para forçar a convergência.
+                                    """
+                                )
+                                    
+                            except Exception as e:
+                                st.error(f"Erro ao processar comparação: {e}")
+
                         # 3. BOTÃO GERAR MAPA
                         if st.button("🗺️ Gerar Mapa Interativo", type="primary", use_container_width=True):
                             st.session_state.show_logistics_map = True
@@ -1855,7 +2072,8 @@ elif page == "Logistic LLM":
                 optimizer = LLMOptimizer(max_iterations=max_iterations)
                 
                 base_params = selected_exp.get('config', {})
-                base_fitness = selected_exp.get('best_fitness', float('inf'))
+                base_fitness = selected_exp.get('best_fitness')
+                if base_fitness is None: base_fitness = float('inf')
                 best_exp_id = selected_exp.get('id')
                 
                 st.subheader("📈 Progresso")
@@ -1917,7 +2135,9 @@ elif page == "Logistic LLM":
                         if check.get('status') == 'completed':
                             break
                     
-                    new_fitness = check.get('best_fitness', float('inf'))
+                    new_fitness = check.get('best_fitness')
+                    if new_fitness is None: new_fitness = float('inf')
+                    
                     change_pct = ((new_fitness - base_fitness) / base_fitness) * 100 if base_fitness else 0
 
                     improved = new_fitness < base_fitness

@@ -1,0 +1,360 @@
+#!/usr/bin/env python3
+"""
+Script para gerar documentação OpenAPI estática
+
+Executa a API localmente, extrai o schema OpenAPI e gera:
+- openapi.json: Schema OpenAPI completo
+- swagger.html: Página Swagger UI standalone
+- redoc.html: Página ReDoc standalone
+"""
+
+import json
+import sys
+import os
+from pathlib import Path
+
+# Adiciona o diretório raiz ao path para imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+from src.api.main import app
+
+def generate_openapi_json():
+    """Gera o schema OpenAPI em formato JSON"""
+    openapi_schema = app.openapi()
+    return openapi_schema
+
+def create_swagger_html(openapi_url="/openapi.json"):
+    """Cria página HTML standalone do Swagger UI"""
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Genetic Algorithm VRP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+        }}
+        .topbar {{
+            display: none;
+        }}
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {{
+            const ui = SwaggerUIBundle({{
+                url: "{openapi_url}",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "BaseLayout",
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 1,
+                docExpansion: "list",
+                filter: true,
+                showRequestHeaders: true,
+                syntaxHighlight: {{
+                    activate: true,
+                    theme: "monokai"
+                }}
+            }})
+        }}
+    </script>
+</body>
+</html>
+"""
+
+def create_redoc_html(openapi_url="/openapi.json"):
+    """Cria página HTML standalone do ReDoc"""
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Genetic Algorithm VRP</title>
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+        }}
+    </style>
+</head>
+<body>
+    <redoc spec-url="{openapi_url}"></redoc>
+    <script src="https://cdn.jsdelivr.net/npm/redoc@latest/bundles/redoc.standalone.js"></script>
+</body>
+</html>
+"""
+
+def create_index_html():
+    """Cria página index com links para as documentações"""
+    return """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GA VRP API - Documentação</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .description {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .features {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 40px;
+        }
+
+        .features h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .features ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .features li {
+            color: #555;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .features li:last-child {
+            border-bottom: none;
+        }
+
+        .features li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .link-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .link-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .link-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+
+        .link-card p {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .tech-stack {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+
+        .tech-stack h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .tech-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Genetic Algorithm VRP API</h1>
+        <p class="subtitle">Vehicle Routing Problem Optimization with Genetic Algorithms</p>
+
+        <div class="description">
+            <p>API RESTful para otimização de rotas de entrega de medicamentos e suprimentos para hospitais
+            usando Algoritmos Genéticos. Baseado em dados reais de hospitais do estado de São Paulo.</p>
+        </div>
+
+        <div class="features">
+            <h2>Características Principais</h2>
+            <ul>
+                <li><strong>24 Operadores Genéticos:</strong> 8 métodos de seleção, 8 de crossover, 8 de mutação</li>
+                <li><strong>Multi-objetivo:</strong> Otimização simultânea de distância, prioridades, capacidade e autonomia</li>
+                <li><strong>Dados Reais:</strong> Coordenadas geográficas de hospitais de São Paulo</li>
+                <li><strong>Execução Assíncrona:</strong> Processamento em background com consulta de status</li>
+                <li><strong>Persistência Completa:</strong> Histórico de experimentos em SQLite</li>
+            </ul>
+        </div>
+
+        <h2 style="margin-bottom: 20px; color: #333;">📚 Documentação da API</h2>
+
+        <div class="links">
+            <a href="swagger.html" class="link-card">
+                <h3>Swagger UI</h3>
+                <p>Documentação interativa com testes de endpoint</p>
+            </a>
+
+            <a href="redoc.html" class="link-card">
+                <h3>ReDoc</h3>
+                <p>Documentação responsiva de 3 painéis</p>
+            </a>
+
+            <a href="openapi.json" class="link-card" download>
+                <h3>OpenAPI JSON</h3>
+                <p>Schema OpenAPI 3.0 completo</p>
+            </a>
+        </div>
+
+        <div class="tech-stack">
+            <h2>Stack Tecnológico</h2>
+            <div class="tech-badges">
+                <span class="badge">Python 3.8+</span>
+                <span class="badge">FastAPI</span>
+                <span class="badge">SQLAlchemy</span>
+                <span class="badge">SQLite</span>
+                <span class="badge">Pydantic</span>
+                <span class="badge">NumPy</span>
+                <span class="badge">Pandas</span>
+                <span class="badge">Streamlit</span>
+                <span class="badge">Folium</span>
+                <span class="badge">Pygame</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; text-align: center; color: #666;">
+            <p><strong>FIAP Tech Challenge - Fase 2</strong></p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Versão 2.0.0 | MIT License</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+def main():
+    """Função principal para gerar toda a documentação"""
+    print("🚀 Gerando documentação OpenAPI...")
+
+    # Cria diretório docs se não existir
+    docs_dir = Path("docs")
+    docs_dir.mkdir(exist_ok=True)
+
+    # 1. Gera openapi.json
+    print("📝 Gerando openapi.json...")
+    openapi_schema = generate_openapi_json()
+    with open(docs_dir / "openapi.json", "w", encoding="utf-8") as f:
+        json.dump(openapi_schema, f, indent=2, ensure_ascii=False)
+    print(f"   ✓ Criado: {docs_dir / 'openapi.json'}")
+
+    # 2. Gera swagger.html
+    print("📄 Gerando swagger.html...")
+    swagger_html = create_swagger_html("openapi.json")
+    with open(docs_dir / "swagger.html", "w", encoding="utf-8") as f:
+        f.write(swagger_html)
+    print(f"   ✓ Criado: {docs_dir / 'swagger.html'}")
+
+    # 3. Gera redoc.html
+    print("📄 Gerando redoc.html...")
+    redoc_html = create_redoc_html("openapi.json")
+    with open(docs_dir / "redoc.html", "w", encoding="utf-8") as f:
+        f.write(redoc_html)
+    print(f"   ✓ Criado: {docs_dir / 'redoc.html'}")
+
+    # 4. Gera index.html
+    print("🏠 Gerando index.html...")
+    index_html = create_index_html()
+    with open(docs_dir / "index.html", "w", encoding="utf-8") as f:
+        f.write(index_html)
+    print(f"   ✓ Criado: {docs_dir / 'index.html'}")
+
+    print("\n✅ Documentação gerada com sucesso!")
+    print(f"\n📂 Arquivos criados em: {docs_dir.absolute()}")
+    print("\n📖 Para visualizar:")
+    print(f"   - Abra {docs_dir / 'index.html'} no navegador")
+    print(f"   - Ou execute: python -m http.server --directory {docs_dir} 8080")
+    print(f"   - E acesse: http://localhost:8080")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,22 @@
+# Dockerfile para Ollama com Gemma3
+FROM ollama/ollama:latest
+
+LABEL maintainer="FIAP Tech Challenge"
+LABEL description="Ollama server with Gemma3 model for local LLM inference"
+LABEL version="2.0.0"
+
+# Define variáveis de ambiente
+ENV OLLAMA_HOST=0.0.0.0:11434 \
+    OLLAMA_MODELS=/root/.ollama/models
+
+# Expõe porta do Ollama
+EXPOSE 11434
+
+# Cria volume para modelos
+VOLUME ["/root/.ollama"]
+
+# Script de inicialização que puxa o modelo Gemma3
+COPY docker/ollama-entrypoint.sh /ollama-entrypoint.sh
+RUN chmod +x /ollama-entrypoint.sh
+
+ENTRYPOINT ["/ollama-entrypoint.sh"]

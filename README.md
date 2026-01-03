@@ -1,579 +1,833 @@
-# Projeto 2: Otimização de Rotas para Distribuição de Medicamentos com Algoritmos Genéticos
+# Otimização de Rotas para Distribuição de Medicamentos com Algoritmos Genéticos
 
-> **FIAP Tech Challenge - Fase 2**
-> Sistema completo de otimização de rotas usando Algoritmos Genéticos
-> Arquitetura MVC • API REST • Interface Web • Testes Automatizados
-> **~14.200 linhas de código** | **30 módulos Python** | **24 operadores genéticos**
+**FIAP Tech Challenge - Fase 2**
+
+Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Implementa arquitetura MVC com API REST, interface web moderna, visualização em tempo real e testes automatizados. O projeto conta com aproximadamente 14.200 linhas de código distribuídas em 30 módulos Python, incluindo 24 operadores genéticos distintos.
 
 ---
 
-## 📋 Índice
+## Sumário
 
 1. [Introdução](#1-introdução)
-2. [O Problema de Roteamento de Veículos (VRP)](#2-o-problema-de-roteamento-de-veículos-vrp)
-3. [Algoritmos Genéticos (AGs)](#3-algoritmos-genéticos-ags)
-4. [Abordagens de Operadores Genéticos](#4-abordagens-de-operadores-genéticos)
+2. [O Problema de Roteamento de Veículos](#2-o-problema-de-roteamento-de-veículos)
+3. [Algoritmos Genéticos](#3-algoritmos-genéticos)
+4. [Operadores Genéticos Implementados](#4-operadores-genéticos-implementados)
 5. [Estrutura do Código](#5-estrutura-do-código)
-6. [Arquitetura Moderna e Camadas do Sistema](#6-arquitetura-moderna-e-camadas-do-sistema)
-   - 6.1. [API REST com FastAPI](#61-api-rest-com-fastapi)
-   - 6.2. [Banco de Dados e Persistência](#62-banco-de-dados-e-persistência)
-   - 6.3. [Camada de Controle (Controller)](#63-camada-de-controle-controller)
-   - 6.4. [Interface Web com Streamlit](#64-interface-web-com-streamlit)
-7. [Visualização](#7-visualização)
-8. [Testes Automatizados](#8-testes-automatizados)
-9. [Como Executar o Projeto](#9-como-executar-o-projeto)
-10. [Conclusão](#10-conclusão)
-11. [Referências](#11-referências)
+6. [Arquitetura do Sistema](#6-arquitetura-do-sistema)
+7. [Interfaces e Visualizações](#7-interfaces-e-visualizações)
+8. [Instalação e Configuração](#8-instalação-e-configuração)
+9. [Guia Completo de Execução](#9-guia-completo-de-execução)
+10. [Testes Automatizados](#10-testes-automatizados)
+11. [Conclusão](#11-conclusão)
+12. [Referências](#12-referências)
 
 ---
 
 ## 1. Introdução
 
-Este documento apresenta o desenvolvimento do Projeto 2 do Tech Challenge, focado na otimização de rotas para a distribuição de medicamentos e insumos hospitalares no estado de São Paulo. O problema, uma variação do Problema do Caixeiro Viajante com Múltiplos Veículos (Multiple Vehicle Routing Problem - mVRP), é resolvido utilizando **Algoritmos Genéticos (AGs)**, uma meta-heurística inspirada na teoria da evolução de Charles Darwin.
+Este projeto apresenta uma solução para o problema de distribuição de medicamentos e insumos hospitalares no estado de São Paulo, utilizando Algoritmos Genéticos como técnica de otimização. O problema tratado é uma variação do Problema do Caixeiro Viajante com Múltiplos Veículos (mVRP), incluindo restrições realistas como capacidade de carga, autonomia dos veículos, janelas de tempo e prioridades de entrega.
 
-A solução proposta visa não apenas minimizar a distância total percorrida, mas também considerar restrições do mundo real, como capacidade dos veículos, autonomia, janelas de tempo e, crucialmente, a **prioridade das entregas** (medicamentos críticos, urgentes e regulares). O projeto foi desenvolvido em Python, com visualizações interativas utilizando Pygame e Folium para a plotagem em mapas reais.
+A solução não se limita a minimizar distâncias. O sistema considera que medicamentos críticos têm prioridade absoluta sobre entregas regulares, e que veículos possuem limitações físicas que devem ser respeitadas. Todo o desenvolvimento foi realizado em Python, com três formas distintas de visualização: mapas interativos HTML, interface em tempo real com Pygame e dashboard executivo web com Streamlit.
 
-## 2. O Problema de Roteamento de Veículos (VRP)
+O projeto foi estruturado seguindo princípios de engenharia de software moderna, com separação clara de responsabilidades, persistência de dados, API REST para integração externa e cobertura completa de testes automatizados.
 
-O Problema de Roteamento de Veículos (Vehicle Routing Problem - VRP) é um problema de otimização combinatória bem conhecido na área de pesquisa operacional e logística. O objetivo é encontrar um conjunto de rotas ótimas para uma frota de veículos que parte de um depósito central para entregar bens a um conjunto de clientes, minimizando custos (distância, tempo, etc.) e respeitando um conjunto de restrições [1].
+## 2. O Problema de Roteamento de Veículos
 
-Neste projeto, lidamos com as seguintes características:
+O Problema de Roteamento de Veículos (Vehicle Routing Problem - VRP) é um dos desafios clássicos de otimização combinatória na área de pesquisa operacional. O objetivo central é definir rotas eficientes para uma frota de veículos que deve atender um conjunto de clientes, partindo de um depósito central e retornando a ele após completar as entregas.
 
-- **Múltiplos Veículos (mVRP):** Uma frota de veículos está disponível para realizar as entregas.
-- **Capacidade (CVRP):** Cada veículo possui uma capacidade limitada de carga.
-- **Autonomia:** Cada veículo tem uma distância máxima que pode percorrer.
-- **Prioridades:** As entregas possuem diferentes níveis de urgência, influenciando a ordem e o tempo de entrega.
+Neste projeto, implementamos uma variante complexa do VRP com as seguintes características:
 
-## 3. Algoritmos Genéticos (AGs)
+**Múltiplos Veículos (mVRP):** O sistema gerencia uma frota de veículos que operam simultaneamente. Cada veículo é uma entidade independente com suas próprias características e restrições.
 
-Algoritmos Genéticos são uma classe de algoritmos de busca e otimização que mimetizam o processo de seleção natural. Eles operam sobre uma **população** de soluções candidatas (chamadas de **cromossomos**), evoluindo-as ao longo de várias **gerações** para encontrar soluções cada vez melhores para um problema [2].
+**Capacidade Limitada (CVRP):** Cada veículo possui uma capacidade máxima de carga medida em unidades de volume ou peso. Quando a capacidade é atingida, o veículo precisa retornar ao depósito antes de continuar atendendo outros pontos.
 
-O fluxo de um Algoritmo Genético é o seguinte:
+**Restrição de Autonomia:** Além da capacidade de carga, cada veículo tem uma distância máxima que pode percorrer antes de necessitar retornar ao depósito. Esta restrição simula limitações de combustível ou bateria.
 
-1.  **Inicialização:** Criação de uma população inicial de soluções aleatórias (ou parcialmente heurísticas).
-2.  **Avaliação (Fitness):** Cada solução é avaliada por uma **função de fitness**, que mede sua qualidade.
-3.  **Seleção:** Indivíduos mais aptos (com melhor fitness) são selecionados como pais para a próxima geração.
-4.  **Crossover (Recombinação):** Os pais trocam informações genéticas para criar novos descendentes (filhos).
-5.  **Mutação:** Pequenas alterações aleatórias são introduzidas nos filhos para manter a diversidade genética.
-6.  **Substituição:** A nova geração substitui a antiga (total ou parcialmente).
-7.  **Critério de Parada:** O processo se repete até que um critério de parada seja atingido (número de gerações, convergência, etc.).
+**Prioridades de Entrega:** As entregas são classificadas em três níveis de prioridade - crítica (prioridade 1), urgente (prioridade 2) e regular (prioridade 3). Medicamentos críticos devem ser entregues prioritariamente, independente da distância percorrida. Esta característica distingue o problema de uma simples otimização de distância.
 
-### 3.1. Representação do Cromossomo
+**Dados Geográficos Reais:** O sistema trabalha com coordenadas geográficas reais (latitude e longitude) de hospitais do estado de São Paulo. As distâncias são calculadas usando a fórmula de Haversine, que fornece a distância geodésica entre dois pontos na superfície terrestre.
 
-Para o VRP, uma representação eficaz é crucial. Neste projeto, um cromossomo é uma **permutação de todos os pontos de entrega**. A divisão das rotas entre os veículos é feita dinamicamente durante a avaliação do fitness, inserindo "quebras" na permutação quando uma restrição (capacidade ou autonomia) é violada.
+## 3. Algoritmos Genéticos
 
-> **Exemplo:** Se temos 8 hospitais (1 a 8) e 2 veículos, um cromossomo pode ser `[3, 5, 1, 8, 2, 4, 6, 7]`. Durante a avaliação, isso pode ser dividido em:
-> - **Rota 1 (Veículo 1):** Depósito -> 3 -> 5 -> 1 -> Depósito
-> - **Rota 2 (Veículo 2):** Depósito -> 8 -> 2 -> 4 -> 6 -> 7 -> Depósito
+Algoritmos Genéticos são técnicas de otimização inspiradas na teoria da evolução de Charles Darwin. Eles trabalham com uma população de soluções candidatas que evoluem ao longo de gerações sucessivas, melhorando gradualmente sua qualidade através de processos que simulam seleção natural, reprodução e mutação.
 
-### 3.2. Função de Fitness
+### 3.1 Estrutura Básica
 
-A função de fitness é o coração do AG. Ela deve quantificar a "qualidade" de uma solução. Para este projeto, foi implementada uma função de fitness multi-objetivo ponderada:
+Um Algoritmo Genético opera em ciclos repetidos que seguem este fluxo:
 
-`Fitness = w1 * Distância + w2 * PenalidadePrioridade + w3 * PenalidadeCapacidade + w4 * PenalidadeAutonomia`
+**Inicialização:** Cria-se uma população inicial de soluções. Estas soluções podem ser completamente aleatórias ou parcialmente construídas usando heurísticas (como o algoritmo do vizinho mais próximo).
 
-- **Distância:** A soma das distâncias de todas as rotas.
-- **Penalidade de Prioridade:** Penaliza soluções onde entregas críticas (prioridade 1) não são feitas no início das rotas.
-- **Penalidade de Capacidade/Autonomia:** Penaliza rotas que excedem a capacidade ou a autonomia do veículo.
+**Avaliação:** Cada solução é avaliada através de uma função de fitness, que mede numericamente sua qualidade. Quanto menor o fitness, melhor a solução (no contexto de minimização).
 
-## 4. Abordagens de Operadores Genéticos
+**Seleção:** Indivíduos com melhor fitness têm maior probabilidade de serem selecionados como pais para a próxima geração.
 
-Uma parte central deste estudo acadêmico foi a implementação e comparação de múltiplos operadores genéticos. A combinação correta de operadores de seleção, crossover e mutação é fundamental para o desempenho do AG.
+**Crossover (Recombinação):** Pares de pais trocam informações genéticas para criar novos indivíduos (filhos) que herdam características de ambos.
 
-### 4.1. Operadores de Seleção
+**Mutação:** Pequenas alterações aleatórias são introduzidas nos filhos para manter diversidade genética e explorar novas regiões do espaço de busca.
 
-O operador de seleção escolhe quais indivíduos da população atual se tornarão pais. Foram implementados **8 métodos de seleção**:
+**Substituição:** A nova geração substitui a antiga, geralmente preservando os melhores indivíduos (elitismo).
 
-| Método de Seleção                  | Descrição                                                                                             |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Seleção por Roleta**            | A probabilidade de seleção é proporcional ao fitness do indivíduo.                                     |
-| **Seleção por Torneio**           | Seleciona *k* indivíduos aleatoriamente e escolhe o melhor deles. Simples e eficaz.                   |
-| **Seleção por Ranking**           | A probabilidade de seleção é baseada no ranking do indivíduo, não no seu fitness absoluto.            |
-| **Seleção por Truncamento**       | Apenas os *T%* melhores indivíduos são selecionados para reprodução.                                   |
-| **Seleção Elitista**              | Garante que os melhores indivíduos passem diretamente para a próxima geração.                          |
-| **Amostragem Universal Estocástica (SUS)** | Variante da roleta com menor viés, usando múltiplos ponteiros igualmente espaçados.                 |
-| **Seleção de Boltzmann**          | Usa uma "temperatura" que controla a pressão seletiva, diminuindo ao longo do tempo.                |
-| **Seleção de Estado Estacionário** | Apenas uma pequena fração da população é substituída a cada geração.                                  |
+**Critério de Parada:** O processo se repete até atingir um número máximo de gerações, alcançar um fitness alvo ou detectar estagnação (quando não há melhoria significativa por várias gerações consecutivas).
 
-### 4.2. Operadores de Crossover
+### 3.2 Representação do Cromossomo
 
-O crossover combina o material genético de dois pais para criar filhos. Para problemas de permutação como o VRP, operadores especiais são necessários. Foram implementados **8 operadores de crossover**:
+A forma como representamos uma solução é crítica para o sucesso do algoritmo. Neste projeto, cada cromossomo é uma permutação de todos os pontos de entrega, excluindo o depósito (que sempre está na posição 0).
 
-| Operador de Crossover                     | Descrição                                                                                                |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Partially Mapped Crossover (PMX)**      | Mapeia um segmento de um pai para o outro, resolvendo conflitos. Preserva posição e ordem.           |
-| **Order Crossover (OX)**                  | Copia um segmento de um pai e preenche o restante com genes do outro pai na ordem em que aparecem.      |
-| **Cycle Crossover (CX)**                  | Identifica ciclos de posições entre os pais e os alterna para criar os filhos. Preserva posição.     |
-| **Alternating Edges Crossover (AEX)**     | Constrói o filho alternando arestas (adjacências) dos dois pais.                                      |
-| **Edge Recombination Crossover (ERX)**    | Constrói uma tabela de arestas dos pais e a utiliza para criar um filho que preserva muitas arestas. |
-| **Sequential Constructive Crossover (SCX)** | Constrói o filho de forma sequencial, escolhendo o próximo gene com base em critérios de distância. |
-| **Order-Based Crossover (OX2)**           | Variante do OX que seleciona posições aleatórias em vez de um segmento contínuo.                   |
-| **Position-Based Crossover (POS)**        | Preserva as posições dos genes selecionados de um pai e preenche o resto com genes do outro.        |
+Exemplo prático: Se temos 8 hospitais numerados de 1 a 8 e 2 veículos, um cromossomo pode ser representado como [3, 5, 1, 8, 2, 4, 6, 7]. Durante a avaliação do fitness, o algoritmo percorre esta sequência e divide as rotas quando uma restrição (capacidade ou autonomia) é violada:
 
-### 4.3. Operadores de Mutação
+- Rota do Veículo 1: Depósito → Hospital 3 → Hospital 5 → Hospital 1 → Depósito
+- Rota do Veículo 2: Depósito → Hospital 8 → Hospital 2 → Hospital 4 → Hospital 6 → Hospital 7 → Depósito
 
-A mutação introduz novas informações genéticas, ajudando a evitar a convergência prematura. Foram implementados **8 operadores de mutação**:
+Esta representação é flexível e permite que o próprio algoritmo descubra quantos veículos são necessários e como distribuir os pontos entre eles.
 
-| Operador de Mutação                   | Descrição                                                                                             |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Swap Mutation**                     | Troca dois genes de posição.                                                                          |
-| **Inversion Mutation**                | Inverte um segmento do cromossomo. Equivalente a uma operação 2-opt.                                |
-| **Scramble Mutation**                 | Embaralha aleatoriamente os genes dentro de um segmento.                                              |
-| **Insert Mutation**                   | Move um gene de uma posição para outra.                                                               |
-| **Displacement Mutation**             | Move um segmento inteiro para outra posição.                                                          |
-| **2-opt Mutation**                    | Remove duas arestas e reconecta os segmentos de forma a descruzar a rota. Clássico no TSP.         |
-| **3-opt Mutation**                    | Versão mais poderosa do 2-opt, que remove e reconecta três arestas.                                |
-| **Reverse Sequence Mutation (RSM)**   | Variante da inversão com seleção de segmento baseada em tamanho aleatório.                          |
+### 3.3 Função de Fitness
+
+A função de fitness é o mecanismo que guia a evolução do algoritmo. Neste projeto, implementamos uma função multi-objetivo ponderada que equilibra diferentes aspectos da qualidade da solução:
+
+```
+Fitness = w1 × Distância_Total + w2 × Penalidade_Prioridade +
+          w3 × Penalidade_Capacidade + w4 × Penalidade_Autonomia
+```
+
+**Distância Total:** Soma das distâncias percorridas por todos os veículos em todas as rotas.
+
+**Penalidade de Prioridade:** Aplica-se quando entregas críticas (prioridade 1) não são realizadas no início das rotas. Esta penalidade é alta o suficiente para forçar o algoritmo a priorizar medicamentos emergenciais.
+
+**Penalidade de Capacidade:** Acrescenta um custo quando a capacidade do veículo é excedida, forçando a criação de uma nova rota.
+
+**Penalidade de Autonomia:** Similar à penalidade de capacidade, mas relacionada à distância máxima que o veículo pode percorrer.
+
+Os pesos (w1, w2, w3, w4) são configuráveis e permitem ajustar a importância relativa de cada objetivo.
+
+## 4. Operadores Genéticos Implementados
+
+Uma das principais contribuições deste projeto é a implementação completa de múltiplas variantes de operadores genéticos, permitindo análise comparativa de desempenho. Foram implementados 24 operadores distintos.
+
+### 4.1 Operadores de Seleção
+
+A seleção determina quais indivíduos se reproduzirão. Foram implementados 8 métodos:
+
+**Seleção por Roleta (Roulette Wheel):** Cada indivíduo tem probabilidade de seleção proporcional ao seu fitness. Indivíduos com melhor fitness ocupam maior "fatia" da roleta.
+
+**Seleção por Torneio (Tournament):** Escolhe-se aleatoriamente k indivíduos e seleciona-se o melhor entre eles. É simples, eficiente e permite controlar a pressão seletiva através do parâmetro k.
+
+**Seleção por Ranking (Rank):** A probabilidade de seleção é baseada na posição do indivíduo no ranking ordenado por fitness, não no valor absoluto do fitness. Reduz o risco de convergência prematura.
+
+**Seleção por Truncamento (Truncation):** Apenas os melhores T% da população são selecionados para reprodução. É uma abordagem direta mas pode reduzir a diversidade genética rapidamente.
+
+**Seleção Elitista (Elitist):** Garante que os melhores indivíduos da geração atual passem diretamente para a próxima geração sem alterações.
+
+**Amostragem Universal Estocástica (SUS):** Versão melhorada da roleta que usa múltiplos ponteiros igualmente espaçados, reduzindo o viés estocástico da seleção por roleta simples.
+
+**Seleção de Boltzmann:** Usa uma "temperatura" que controla a pressão seletiva. No início (temperatura alta), a seleção é mais aleatória. Com o tempo (temperatura reduzida), favorece cada vez mais os melhores indivíduos.
+
+**Seleção de Estado Estacionário (Steady State):** Apenas uma pequena fração da população é substituída a cada geração. Preserva mais a população existente entre gerações.
+
+### 4.2 Operadores de Crossover
+
+O crossover combina material genético de dois pais. Para problemas de permutação como o VRP, operadores especiais são necessários para manter a validade das soluções (sem duplicatas ou omissões). Foram implementados 8 operadores:
+
+**Partially Mapped Crossover (PMX):** Copia um segmento de um pai para o filho e usa mapeamento para resolver conflitos. Preserva tanto a ordem relativa quanto a posição absoluta de alguns genes.
+
+**Order Crossover (OX):** Copia um segmento de um pai e preenche as posições restantes com genes do outro pai na ordem em que aparecem. Preserva principalmente a ordem relativa.
+
+**Cycle Crossover (CX):** Identifica ciclos de posições entre os pais e os alterna para criar filhos. Cada gene herda sua posição de um dos pais.
+
+**Alternating Edges Crossover (AEX):** Constrói o filho alternando arestas (conexões entre cidades) dos dois pais.
+
+**Edge Recombination Crossover (ERX):** Constrói uma tabela de adjacências dos pais e usa esta informação para criar filhos que preservam o máximo possível de arestas parentais.
+
+**Sequential Constructive Crossover (SCX):** Constrói o filho sequencialmente, escolhendo o próximo gene baseado em critérios de distância mínima.
+
+**Order-Based Crossover (OX2):** Variante do OX que seleciona posições aleatórias em vez de um segmento contínuo.
+
+**Position-Based Crossover (POS):** Preserva as posições dos genes selecionados de um pai e preenche o resto com genes do outro pai.
+
+### 4.3 Operadores de Mutação
+
+A mutação introduz variabilidade genética e ajuda a explorar novas regiões do espaço de busca. Foram implementados 8 operadores:
+
+**Swap Mutation:** Escolhe aleatoriamente dois genes e troca suas posições. É o operador de mutação mais simples.
+
+**Inversion Mutation:** Seleciona um segmento do cromossomo e inverte sua ordem. É equivalente a uma operação 2-opt aplicada aleatoriamente.
+
+**Scramble Mutation:** Seleciona um segmento e embaralha aleatoriamente os genes dentro dele.
+
+**Insert Mutation:** Remove um gene de uma posição e o insere em outra posição.
+
+**Displacement Mutation:** Remove um segmento inteiro e o reinsere em outra posição, mantendo a ordem interna do segmento.
+
+**2-opt Mutation:** Remove duas arestas da rota e reconecta os segmentos de forma a eliminar cruzamentos. É uma técnica clássica de melhoria local em problemas de roteamento.
+
+**3-opt Mutation:** Versão mais complexa do 2-opt que remove três arestas e considera múltiplas formas de reconexão.
+
+**Reverse Sequence Mutation (RSM):** Variante da inversão com seleção de segmento baseada em tamanho aleatório.
 
 ## 5. Estrutura do Código
 
-O projeto foi estruturado de forma modular seguindo arquitetura **MVC (Model-View-Controller)**, separando as responsabilidades em diferentes camadas:
+O projeto foi organizado seguindo princípios de modularização e separação de responsabilidades, facilitando manutenção, testes e extensibilidade.
 
 ```
 projeto2_haversine/
 ├── data/
-│   ├── hospitais_sp.py         # Módulo com dados dos hospitais e cenários
+│   ├── hospitais_sp.py         # Dados dos hospitais e cenários de teste
 │   ├── hospitais_sp.json       # Dados em formato JSON (19KB)
-│   └── experiments.db          # Banco de dados SQLite de experimentos
+│   └── experiments.db          # Banco SQLite de experimentos
 ├── src/
 │   ├── genetic_algorithm/      # Núcleo do Algoritmo Genético (4.085 linhas)
-│   │   ├── __init__.py
 │   │   ├── chromosome.py       # Representação do cromossomo e rotas (494 linhas)
 │   │   ├── population.py       # Gerenciamento da população (309 linhas)
 │   │   ├── selection.py        # 8 métodos de seleção (632 linhas)
 │   │   ├── crossover.py        # 8 operadores de crossover (953 linhas)
 │   │   ├── mutation.py         # 8 operadores de mutação (471 linhas)
 │   │   ├── fitness.py          # Função de fitness multi-objetivo (617 linhas)
-│   │   └── genetic_algorithm.py # Orquestrador principal do AG (579 linhas)
+│   │   └── genetic_algorithm.py # Orquestrador principal (579 linhas)
 │   ├── visualization/          # Camada de Visualização (3.211 linhas)
-│   │   ├── __init__.py
-│   │   ├── route_visualizer.py      # Mapas com Folium e Matplotlib (606 linhas)
-│   │   ├── evolution_visualizer.py  # Visualização Pygame em tempo real (565 linhas)
+│   │   ├── route_visualizer.py      # Mapas Folium e Matplotlib (606 linhas)
+│   │   ├── evolution_visualizer.py  # Visualização Pygame (565 linhas)
 │   │   └── interactive_viewer.py    # Interface interativa completa (2.017 linhas)
 │   ├── api/                    # API REST com FastAPI (125 linhas)
 │   │   └── main.py             # 10 endpoints RESTful
 │   ├── controllers/            # Camada de Controle (260 linhas)
-│   │   └── experiment_manager.py # Gerenciador de experimentos e execuções
+│   │   └── experiment_manager.py # Gerenciador de experimentos
 │   ├── database/               # Camada de Persistência (47 linhas)
 │   │   ├── database.py         # Configuração SQLAlchemy (22 linhas)
 │   │   └── models.py           # Modelo ORM Experiment (25 linhas)
 │   ├── web/                    # Interface Web com Streamlit
-│   │   ├── app.py              # Dashboard executivo e configurador
+│   │   ├── app.py              # Dashboard executivo
 │   │   ├── components/
-│   │   │   └── styles.py       # Estilização CSS customizada
-│   │   └── pages/              # Páginas adicionais (futuro)
+│   │   │   └── styles.py       # Estilização CSS
+│   │   └── pages/              # Páginas adicionais
 │   └── utils/
-│       ├── __init__.py
 │       └── distance.py         # Cálculo de distância Haversine
-├── tests/                      # Suite de Testes Automatizados (8 arquivos)
-│   ├── test_ga_core.py         # Testes do núcleo do AG
-│   ├── test_ga_operators.py    # Testes dos operadores genéticos
-│   ├── test_ga_fitness.py      # Testes da função de fitness
-│   ├── test_ga_integration.py  # Testes de integração completa
-│   ├── test_api.py             # Testes dos endpoints da API
-│   ├── test_api_execution.py   # Testes de execução via API
-│   ├── test_controller.py      # Testes do ExperimentManager
-│   └── test_database.py        # Testes da camada de persistência
-├── assets/                     # Recursos gráficos
-│   └── logo.png                # Logo do projeto (347KB)
-├── main.py                     # Script principal para execução (16KB)
-├── pytest.ini                  # Configuração do pytest
-├── README.md                   # Este documento (documentação completa)
+├── tests/                      # Suite de Testes (8 arquivos)
+│   ├── test_ga_core.py         # Testes do núcleo
+│   ├── test_ga_operators.py    # Testes dos operadores
+│   ├── test_ga_fitness.py      # Testes de fitness
+│   ├── test_ga_integration.py  # Testes de integração
+│   ├── test_api.py             # Testes da API
+│   ├── test_api_execution.py   # Testes de execução
+│   ├── test_controller.py      # Testes do controller
+│   └── test_database.py        # Testes de persistência
+├── assets/
+│   └── logo.png                # Logo do projeto
+├── main.py                     # Script principal de execução
+├── pytest.ini                  # Configuração de testes
+├── README.md                   # Esta documentação
 ├── CLAUDE.md                   # Instruções para Claude Code
-├── requirements.txt            # Dependências do projeto
-└── .gitignore                  # Exclusões do Git
-
-# Arquivos Gerados (não versionados)
-├── mapa_rotas_hospitais_sp.html # Mapa interativo HTML gerado (101KB)
-└── sql_app.db                  # Banco de dados SQLite da aplicação (12KB)
+└── requirements.txt            # Dependências do projeto
 ```
 
 **Estatísticas do Projeto:**
-- **Total de linhas de código:** ~14.200 linhas
-- **Arquivos Python:** 30 módulos
-- **Operadores genéticos:** 24 (8 seleção + 8 crossover + 8 mutação)
-- **Endpoints API:** 10 endpoints RESTful
-- **Testes automatizados:** 8 suites de teste
-- **Tamanho total:** 2,1 MB
+- Total de linhas de código: aproximadamente 14.200
+- Arquivos Python: 30 módulos
+- Operadores genéticos: 24 (8 seleção + 8 crossover + 8 mutação)
+- Endpoints API: 10 endpoints RESTful
+- Suites de teste: 8 arquivos
+- Tamanho total: 2,1 MB
 
-## 6. Arquitetura Moderna e Camadas do Sistema
+## 6. Arquitetura do Sistema
 
-O projeto evoluiu para uma **arquitetura de 3 camadas** completa, seguindo o padrão **MVC (Model-View-Controller)** com persistência de dados, API REST e interface web moderna.
+O sistema implementa uma arquitetura em três camadas seguindo o padrão MVC (Model-View-Controller), com persistência de dados, API REST e interfaces modernas.
 
-### 6.1. API REST com FastAPI
+### 6.1 Camada de Modelo (Model)
 
-A API fornece acesso programático ao sistema de otimização, permitindo automação de experimentos e integração com outras aplicações.
+**Banco de Dados:** SQLite com SQLAlchemy ORM gerencia a persistência de experimentos.
 
-**Arquivo:** `src/api/main.py` (125 linhas)
+O modelo Experiment armazena:
+- Identificador único e timestamp de criação
+- Status (pending, running, completed, failed)
+- Configuração completa em formato JSON
+- Resultados: melhor fitness, número de gerações executadas, tempo de execução
+- Detalhes das rotas otimizadas em formato JSON
 
-**Endpoints Disponíveis:**
+**Arquivos de Dados:** O módulo `hospitais_sp.py` contém dados reais de 25+ hospitais do estado de São Paulo, incluindo coordenadas GPS, demanda de medicamentos e nível de prioridade.
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `POST` | `/run` | Inicia um novo experimento com configuração personalizada |
-| `GET` | `/experiments` | Lista os experimentos mais recentes (limite configurável) |
-| `GET` | `/experiments/latest` | Retorna o último experimento executado |
-| `GET` | `/experiments/{id}` | Obtém detalhes completos de um experimento específico |
-| `DELETE` | `/experiments/all` | Remove TODOS os experimentos do histórico |
-| `DELETE` | `/experiments/failed` | Remove apenas experimentos com status "failed" |
-| `DELETE` | `/experiments/{id}` | Remove um experimento específico por ID |
-| `GET` | `/scenarios/{name}` | Retorna preview dos pontos de um cenário (small, medium, large, critical) |
+### 6.2 Camada de Controle (Controller)
 
-**Parâmetros Configuráveis (POST /run):**
+O componente `ExperimentManager` orquestra toda a lógica de negócio:
 
-O endpoint `/run` aceita um objeto `ExperimentConfig` com 25+ parâmetros configuráveis via JSON:
+**Gerenciamento de Experimentos:** Cria, recupera, lista e remove experimentos do banco de dados.
 
-```json
-{
-  "population_size": 100,
-  "max_generations": 200,
-  "crossover_rate": 0.9,
-  "mutation_rate": 0.15,
-  "selection_method": "tournament",
-  "crossover_method": "order_crossover",
-  "mutation_method": "inversion",
-  "replacement_strategy": "elitist",
-  "fitness_type": "weighted_multi_objective",
-  "tournament_size": 3,
-  "elite_size": 2,
-  "truncation_threshold": 0.5,
-  "boltzmann_temperature": 100.0,
-  "steady_state_ratio": 0.2,
-  "num_vehicles": 3,
-  "vehicle_capacity": 100.0,
-  "vehicle_speed": 40.0,
-  "vehicle_max_distance": 200.0,
-  "scenario": "large",
-  "w_distance": 1.0,
-  "w_priority": 10.0,
-  "w_capacity": 100.0,
-  "w_autonomy": 100.0,
-  "w_window": 50.0,
-  "stagnation_limit": 50,
-  "heuristic_init_ratio": 0.2
-}
-```
+**Execução Assíncrona:** Inicia execuções do Algoritmo Genético em threads separadas, permitindo que múltiplos experimentos rodem em background sem bloquear a aplicação.
 
-**Validação com Pydantic:**
-- Todos os parâmetros são validados automaticamente
-- Restrições de intervalo (ex: `crossover_rate` entre 0.0 e 1.0)
-- Validação de enums (métodos de seleção, crossover, mutação)
-- Mensagens de erro claras e estruturadas
+**Integração de Cenários:** Fornece acesso aos cenários pré-definidos (small, medium, large, critical) e permite preview dos dados antes da execução.
 
-**Execução em Background:**
-- Experimentos são executados em `BackgroundTasks` do FastAPI
-- Não bloqueia a API durante execuções longas
-- Status do experimento pode ser consultado via `GET /experiments/{id}`
+**Persistência de Resultados:** Atualiza o banco de dados com os resultados assim que a execução termina, incluindo tratamento robusto de erros.
 
-**Exemplo de Uso:**
+### 6.3 Camada de Visão (View)
 
-```bash
-# Iniciar a API
-uvicorn src.api.main:app --reload --port 8000
+O sistema oferece três interfaces distintas:
 
-# Criar um novo experimento
-curl -X POST http://localhost:8000/run \
-  -H "Content-Type: application/json" \
-  -d '{"population_size": 80, "max_generations": 150, "scenario": "medium"}'
+**API REST (FastAPI):** Fornece acesso programático via HTTP para integração com outras aplicações.
 
-# Listar experimentos
-curl http://localhost:8000/experiments
+**Dashboard Web (Streamlit):** Interface gráfica moderna para gestão de experimentos, configuração de parâmetros e análise de resultados.
 
-# Ver detalhes de um experimento
-curl http://localhost:8000/experiments/1
-```
+**Visualização em Tempo Real (Pygame):** Interface visual que mostra a evolução do algoritmo enquanto ele executa.
 
-### 6.2. Banco de Dados e Persistência
+### 6.4 API REST
 
-O sistema utiliza **SQLAlchemy ORM** com **SQLite** para persistência de todos os experimentos e resultados.
+Implementada com FastAPI, a API oferece 10 endpoints para controle completo do sistema:
 
-**Arquivos:**
-- `src/database/database.py` - Configuração do engine e sessões (22 linhas)
-- `src/database/models.py` - Modelos ORM (25 linhas)
+**POST /run:** Cria e inicia um novo experimento. Aceita um objeto JSON com mais de 25 parâmetros configuráveis, incluindo tamanho da população, taxas de crossover e mutação, métodos de seleção, configuração de veículos, cenário a ser usado e pesos da função de fitness.
 
-**Modelo Experiment:**
+**GET /experiments:** Lista os experimentos mais recentes. Aceita parâmetro de limite para controlar quantos registros retornar.
 
-```python
-class Experiment(Base):
-    __tablename__ = "experiments"
+**GET /experiments/latest:** Retorna apenas o último experimento executado.
 
-    id: int                    # Chave primária
-    created_at: datetime       # Timestamp de criação
-    status: str                # pending | running | completed | failed
-    config: JSON               # Configuração completa do experimento
-    best_fitness: float        # Melhor fitness alcançado
-    generations_run: int       # Número de gerações executadas
-    execution_time: float      # Tempo total de execução (segundos)
-    result_details: JSON       # Detalhes das rotas e solução
-```
+**GET /experiments/{id}:** Obtém detalhes completos de um experimento específico, incluindo configuração, resultados e rotas geradas.
 
-**Estados do Experimento:**
-- **pending**: Experimento criado, aguardando execução
-- **running**: Em execução no momento
-- **completed**: Finalizado com sucesso
-- **failed**: Erro durante a execução
+**DELETE /experiments/all:** Remove todos os experimentos do histórico (usado para limpeza).
 
-**Banco de Dados:**
-- Localização: `data/experiments.db` e `sql_app.db`
-- Schema criado automaticamente na primeira execução
-- Histórico completo de todas as execuções
-- Resultados detalhados em formato JSON
+**DELETE /experiments/failed:** Remove apenas experimentos que falharam durante a execução.
 
-**Benefícios:**
-- Rastreabilidade completa de experimentos
-- Comparação de configurações e resultados
-- Reprodutibilidade científica
-- Análise histórica de desempenho
+**DELETE /experiments/{id}:** Remove um experimento específico por ID.
 
-### 6.3. Camada de Controle (Controller)
+**GET /scenarios/{name}:** Retorna preview dos pontos de um cenário (small, medium, large, critical) antes de executá-lo.
 
-O **ExperimentManager** orquestra toda a lógica de negócio do sistema.
+**GET /config/defaults:** Retorna a configuração padrão do sistema com todos os parâmetros.
 
-**Arquivo:** `src/controllers/experiment_manager.py` (260 linhas)
+**GET /config/options:** Lista todas as opções disponíveis para cada campo configurável (métodos de seleção, crossover, mutação, etc).
 
-**Responsabilidades:**
+A API usa validação automática com Pydantic, garantindo que todos os parâmetros estejam dentro de faixas válidas. As execuções ocorrem em background através do sistema de BackgroundTasks do FastAPI, permitindo que a API responda imediatamente sem esperar a conclusão do experimento.
 
-1. **Gerenciamento de Experimentos:**
-   - `create_experiment(config_dict)` - Cria novo registro no banco
-   - `get_experiment(experiment_id)` - Recupera experimento por ID
-   - `list_experiments(limit)` - Lista experimentos recentes
-   - `delete_experiment(experiment_id)` - Remove experimento específico
-   - `delete_all_experiments()` - Limpa todo o histórico
-   - `delete_failed_experiments()` - Remove apenas falhados
+### 6.5 Documentação OpenAPI/Swagger
 
-2. **Execução do Algoritmo Genético:**
-   - `run_experiment_background(experiment_id)` - Inicia execução em thread separada
-   - `_run_process(experiment_id)` - Lógica principal de execução
-   - Conversão de configuração JSON → GAConfig
-   - Criação de delivery points a partir dos cenários
-   - Configuração de veículos com parâmetros customizados
+O projeto inclui documentação completa da API em formato OpenAPI 3.0, disponível tanto de forma dinâmica quanto estática.
 
-3. **Integração de Cenários:**
-   - `get_scenario_data(scenario_name)` - Retorna dados do cenário
-   - Suporte a 4 cenários: small, medium, large, critical
-   - Preview de pontos antes da execução
+**Documentação Dinâmica (com API rodando):**
 
-4. **Persistência de Resultados:**
-   - `update_experiment_result()` - Salva resultados após execução
-   - `complete_experiment()` - Marca como completo e persiste
-   - Tratamento de erros e status "failed"
+Com a API executando (`uvicorn src.api.main:app`), acesse:
 
-**Integração:**
-- Conecta API ↔ Banco de Dados ↔ Algoritmo Genético
-- Threading para execuções assíncronas
-- Tratamento robusto de exceções
+- **Swagger UI:** http://localhost:8000/docs - Interface interativa completa com teste de endpoints
+- **ReDoc:** http://localhost:8000/redoc - Documentação em formato de três painéis
 
-### 6.4. Interface Web com Streamlit
+**Documentação Estática:**
 
-Uma interface web moderna e intuitiva para gestão de experimentos e visualização de resultados.
-
-**Arquivo:** `src/web/app.py`
-
-**Funcionalidades:**
-
-1. **Dashboard Executivo:**
-   - Métricas globais (total de experimentos, taxa de sucesso, melhor fitness)
-   - Histórico de execuções com KPIs
-   - Gráficos de evolução temporal
-
-2. **Configurador Intuitivo:**
-   - Interface gráfica para ajustar todos os 25+ parâmetros
-   - Sliders, selectboxes e inputs organizados por categoria
-   - Validação em tempo real
-   - Preview do cenário selecionado
-
-3. **Controle de Execução:**
-   - Botão para iniciar experimentos via API
-   - Modo background (silencioso, salva no banco)
-   - Modo interativo (abre visualização Pygame)
-   - Acompanhamento de status em tempo real
-
-4. **Análise Detalhada:**
-   - Tabela de experimentos históricos
-   - Comparação de configurações
-   - Visualização de rotas otimizadas
-   - Exportação de resultados
-
-5. **Gestão de Histórico:**
-   - Limpeza de experimentos falhados
-   - Reset completo do histórico
-   - Remoção individual de experimentos
-
-**Recursos Visuais:**
-- Logo customizada (assets/logo.png)
-- Estilização CSS profissional
-- Layout responsivo
-- Navegação por abas
-
-**Exemplo de Uso:**
+O projeto inclui documentação gerada estaticamente na pasta `docs/`:
 
 ```bash
-# Iniciar interface web
-streamlit run src/web/app.py
-
-# Acesse no navegador: http://localhost:8501
+# Gerar documentação estática
+python generate_docs.py
 ```
 
-## 7. Visualização
+Arquivos gerados em `docs/`:
+- **index.html:** Página inicial com links para toda documentação
+- **swagger.html:** Swagger UI standalone (funciona offline)
+- **redoc.html:** ReDoc standalone (funciona offline)
+- **openapi.json:** Schema OpenAPI 3.0 completo
 
-Para uma melhor compreensão dos resultados, foram implementadas três formas de visualização:
-
-### 7.1. Mapas Interativos com Folium
-
-Após a execução do algoritmo, um mapa interativo em HTML é gerado usando a biblioteca **Folium**, que se baseia no Leaflet.js. Este mapa mostra:
-
-- A localização real dos hospitais e do depósito no mapa de São Paulo.
-- As rotas otimizadas, com cores diferentes para cada veículo.
-- Pop-ups interativos com detalhes de cada hospital e rota.
-- Uma legenda clara para identificar os elementos.
-
-![Mapa de Rotas](rotas_hospitais_sp.png)
-*Figura 1: Exemplo de mapa de rotas gerado com Matplotlib (uma versão estática também é criada).*
-
-### 7.2. Visualização em Tempo Real com Pygame
-
-Para fins acadêmicos e de análise do comportamento do algoritmo, foi criada uma interface interativa com **Pygame**. Esta interface permite:
-
-- Visualizar a evolução das rotas da melhor solução a cada geração.
-- Acompanhar o gráfico de convergência do fitness (melhor e média da população).
-- Iniciar, pausar e parar a execução do algoritmo.
-- Analisar estatísticas detalhadas da solução em tempo real.
-
-### 7.3. Interface Web e Dashboard (Streamlit)
-
-Uma interface moderna foi desenvolvida para facilitar a gestão dos experimentos:
-
-- **Dashboard Executivo:** Métricas globais, histórico de execuções e KPIs.
-- **Configurador Intuitivo:** Interface gráfica para ajustar todos os parâmetros do AG (taxas, métodos, população).
-- **Integração Visual:** Botão para lançar a visualização Pygame diretamente do navegador.
-- **Modo Background:** Execute experimentos silenciosamente via API e salve os resultados no banco de dados.
-- **Gestão de Histórico:** Limpeza de experimentos, visualização de resultados, comparação de configurações.
-
-## 8. Testes Automatizados
-
-O projeto conta com uma suite completa de testes automatizados usando **pytest**.
-
-**Arquivo de Configuração:** `pytest.ini`
-
-**Suites de Testes (8 arquivos):**
-
-| Arquivo de Teste | Descrição | Cobertura |
-|------------------|-----------|-----------|
-| `test_ga_core.py` | Testa o núcleo do AG | Chromosome, Vehicle, divisão de rotas |
-| `test_ga_operators.py` | Testa operadores genéticos | Mutação, crossover, validação de permutações |
-| `test_ga_fitness.py` | Testa função de fitness | Cálculo multi-objetivo, penalidades |
-| `test_ga_integration.py` | Testa integração completa | Execução ponta a ponta do GA |
-| `test_api.py` | Testa endpoints REST | Validação de schemas, respostas HTTP |
-| `test_api_execution.py` | Testa execução via API | Integração API → Execução → Banco |
-| `test_controller.py` | Testa ExperimentManager | CRUD, execução background |
-| `test_database.py` | Testa camada de persistência | ORM SQLAlchemy, modelos |
-
-**Executar Testes:**
+**Visualizando documentação offline:**
 
 ```bash
-# Todos os testes
-pytest tests/
+# Método 1: Abrir diretamente no navegador
+open docs/index.html  # macOS
+xdg-open docs/index.html  # Linux
+start docs/index.html  # Windows
 
-# Modo verbose
-pytest tests/ -v
-
-# Teste específico
-pytest tests/test_ga_operators.py -v
-
-# Com cobertura (se tiver pytest-cov)
-pytest tests/ --cov=src --cov-report=html
+# Método 2: Servidor HTTP local
+python -m http.server --directory docs 8080
+# Acesse: http://localhost:8080
 ```
 
-**Cobertura:**
-- Testa todos os 24 operadores genéticos
-- Validação de permutações válidas
-- Testes de integração completa
-- Validação de API e persistência
-- Tratamento de erros
+**Características da Documentação:**
 
-## 9. Como Executar o Projeto
+- **Schemas Completos:** Todos os modelos de request/response documentados com Pydantic
+- **Exemplos Práticos:** Cada endpoint inclui exemplos de uso
+- **Validações Detalhadas:** Ranges válidos para cada parâmetro
+- **Tags Organizadas:** Endpoints agrupados em: experiments, scenarios, configuration, health
+- **Descrições Técnicas:** Explicações detalhadas do funcionamento de cada operação
+- **Tipos de Resposta:** Documentação de todos os códigos HTTP retornados (200, 404, 422, 500)
 
-### 9.1. Pré-requisitos
+**Integrando com outras ferramentas:**
 
-- **Python 3.8+** (recomendado: Python 3.10 ou superior)
-- Bibliotecas listadas em `requirements.txt`
-- Sistema Operacional: Linux, macOS ou Windows
+O arquivo `openapi.json` pode ser importado em ferramentas como:
+- **Postman:** Importar coleção a partir do schema OpenAPI
+- **Insomnia:** Criar workspace a partir do schema
+- **Swagger Codegen:** Gerar clientes em várias linguagens
+- **API Testing Tools:** Ferramentas de teste automatizado de APIs
 
-### 9.2. Instalação
+## 7. Interfaces e Visualizações
 
-1. Clone o repositório ou descompacte os arquivos do projeto:
-   ```bash
-   git clone <url-do-repositorio>
-   cd projeto2_haversine
-   ```
+O sistema oferece três formas distintas de interação, cada uma adequada a um propósito específico.
 
-2. Crie um ambiente virtual (recomendado):
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/macOS
-   # ou
-   venv\Scripts\activate  # Windows
-   ```
+### 7.1 Interface Web (Streamlit)
 
-3. Instale as dependências:
-   ```bash
-   pip install -r requirements.txt
-   ```
+A interface web fornece controle completo do sistema através do navegador. Ela está dividida em várias páginas:
 
-### 9.3. Modos de Execução via Terminal
+**Página Dashboard:**
 
-O script `main.py` oferece diferentes modos de execução:
+Esta é a tela principal do sistema. Ao acessar, você vê três métricas principais no topo: total de experimentos executados, taxa de sucesso (percentual de experimentos concluídos sem erros) e melhor fitness alcançado em todos os experimentos.
 
-#### **Modo Básico (Terminal)**
-Roda a otimização no terminal e exibe os resultados:
+Logo abaixo há um sistema de filtros que permite selecionar quais tipos de experimentos você quer visualizar. Os experimentos são classificados por tipo de função de fitness utilizada (Multiobjetivo, Distância Pura, Baseado em Penalidades, ou Consciente de Prioridade).
+
+A seção principal mostra uma tabela com todos os experimentos executados. Para cada experimento, você vê:
+- ID único do experimento
+- Data e hora de criação (convertida para horário de Brasília)
+- Status (pending, running, completed ou failed)
+- Cenário utilizado (small, medium, large, critical)
+- Número de veículos configurados
+- Melhor fitness alcançado
+- Número de gerações executadas
+- Tempo total de execução em segundos
+
+Você pode clicar em qualquer experimento para ver seus detalhes completos, incluindo a configuração exata usada e as rotas geradas.
+
+No rodapé da página existem botões para limpar o histórico. "Limpar Falhados" remove apenas experimentos com erro, enquanto "Limpar Tudo" remove o histórico completo (com confirmação de segurança).
+
+**Página Nova Execução:**
+
+Esta página é um configurador completo para criar novos experimentos. A interface está organizada em seções expansíveis:
+
+*Configuração de Cenário:* Aqui você escolhe qual conjunto de hospitais usar. "Small" usa cerca de 10 hospitais (ideal para testes rápidos), "Medium" usa cerca de 20 hospitais (padrão), "Large" usa todos os hospitais disponíveis (mais demorado), e "Critical" usa apenas hospitais com entregas críticas.
+
+*Parâmetros do Algoritmo Genético:* Controla o comportamento central do algoritmo. Você define o tamanho da população (quantos indivíduos existem em cada geração), número máximo de gerações (quando parar se não houver melhoria), taxa de crossover (probabilidade de dois pais gerarem filhos) e taxa de mutação (probabilidade de um filho sofrer mutação).
+
+*Métodos Genéticos:* Aqui você escolhe qual variante de cada operador usar. Pode selecionar entre os 8 métodos de seleção (como Tournament ou Roulette), os 8 operadores de crossover (como PMX ou Order Crossover) e os 8 operadores de mutação (como Inversion ou 2-opt). Cada método tem características próprias que afetam o desempenho.
+
+*Configuração de Veículos:* Define as características da frota. Você especifica quantos veículos estão disponíveis, qual a capacidade de carga de cada um (em unidades), a velocidade média (km/h) e a autonomia máxima (distância em km antes de precisar retornar ao depósito).
+
+*Pesos da Função de Fitness:* Controla a importância relativa de cada objetivo. Pesos maiores tornam aquele aspecto mais importante na avaliação. Você ajusta o peso da distância total, da penalidade de prioridade (quão importante é atender entregas críticas primeiro), da penalidade de capacidade e da penalidade de autonomia.
+
+*Critérios de Parada:* Define quando o algoritmo deve parar além do número máximo de gerações. O limite de estagnação especifica quantas gerações sem melhoria são toleradas antes de encerrar.
+
+Após configurar todos os parâmetros, você escolhe o modo de execução:
+
+- "Executar com Visualização" abre uma janela Pygame mostrando a evolução em tempo real
+- "Executar em Background" roda silenciosamente e salva os resultados no banco de dados
+
+**Página Análise Detalhada:**
+
+Mostra informações aprofundadas sobre os experimentos executados. Você pode selecionar um experimento específico e ver gráficos de evolução do fitness ao longo das gerações, comparação entre diferentes configurações, e análise estatística dos resultados.
+
+**Página Gerador Logístico:**
+
+Permite criar cenários customizados, adicionando ou removendo hospitais, ajustando prioridades e demandas. Útil para testar situações específicas.
+
+**Página de Configurações:**
+
+Permite ajustar configurações globais do sistema, como tema visual, timeout de requisições à API, e preferências de visualização.
+
+### 7.2 Visualização em Tempo Real (Pygame)
+
+A interface Pygame oferece uma visão completa da execução do algoritmo enquanto ele roda. A tela é dividida em três áreas principais:
+
+**Painel de Visualização (lado esquerdo):**
+
+Mostra um mapa geográfico simplificado com todos os hospitais e as rotas. O depósito aparece como um círculo vermelho maior. Cada hospital é representado por um círculo colorido de acordo com sua prioridade - vermelho para crítico, amarelo para urgente, verde para regular.
+
+As rotas aparecem como linhas conectando os pontos. Cada veículo tem uma cor diferente para facilitar a identificação. À medida que o algoritmo evolui, você vê as rotas mudando de forma, cruzamentos sendo eliminados, e a solução melhorando visualmente.
+
+Abaixo do mapa há uma legenda explicando as cores e símbolos utilizados.
+
+**Painel de Gráficos (lado direito superior):**
+
+Mostra dois gráficos em tempo real:
+
+O primeiro gráfico exibe a evolução do fitness ao longo das gerações. A linha azul mostra o melhor fitness encontrado até o momento, enquanto a linha cinza mostra a média da população. Você pode observar como o algoritmo converge gradualmente para soluções melhores.
+
+O segundo gráfico mostra a diversidade da população ao longo do tempo, medida pelo desvio padrão do fitness. Alta diversidade indica que a população tem soluções muito variadas, enquanto baixa diversidade sugere convergência.
+
+**Painel de Estatísticas (lado direito inferior):**
+
+Apresenta informações detalhadas sobre a melhor solução atual:
+
+- Geração atual e progresso percentual
+- Melhor fitness encontrado (quanto menor, melhor)
+- Distância total percorrida por todos os veículos
+- Número de rotas criadas
+- Tempo decorrido desde o início
+- Velocidade de processamento (gerações por segundo)
+
+Para cada veículo, são listados:
+- Número de paradas que ele faz
+- Distância total percorrida
+- Carga transportada
+- Utilização percentual da capacidade
+
+**Controles Interativos:**
+
+Na parte inferior da tela há botões de controle:
+
+- "Iniciar/Continuar": Começa ou resume a execução
+- "Pausar": Pausa a execução para análise detalhada
+- "Parar": Encerra completamente a execução
+- "Salvar Resultado": Exporta a melhor solução encontrada
+- "Ajustar Velocidade": Controla a velocidade de visualização
+
+Você pode pausar a qualquer momento para examinar uma geração específica, aproximar o zoom no mapa para ver detalhes das rotas, ou ajustar parâmetros em tempo real.
+
+### 7.3 Mapas Interativos (Folium)
+
+Após a execução do algoritmo, o sistema gera um arquivo HTML com um mapa interativo baseado em mapas reais do OpenStreetMap. Este mapa pode ser aberto em qualquer navegador.
+
+O mapa mostra:
+
+**Localizações Reais:** Cada hospital aparece em sua posição geográfica exata no mapa de São Paulo. Você pode dar zoom, arrastar o mapa e ver as ruas e regiões reais.
+
+**Rotas Otimizadas:** As rotas de cada veículo são desenhadas com cores diferentes. Você pode seguir visualmente o caminho que cada veículo percorre.
+
+**Marcadores Interativos:** Clicando em qualquer hospital, um popup aparece mostrando:
+- Nome do hospital
+- Endereço
+- Prioridade da entrega
+- Demanda de medicamentos
+- Qual veículo atenderá este ponto
+- Ordem de visita na rota
+
+**Legenda:** Uma legenda flutuante explica as cores das rotas e símbolos utilizados.
+
+Este mapa é especialmente útil para apresentações e para verificar a viabilidade prática das rotas geradas, já que você pode comparar com o conhecimento local do tráfego e infraestrutura de São Paulo.
+
+## 8. Instalação e Configuração
+
+Este guia detalha todos os passos necessários para instalar e configurar o sistema em sua máquina.
+
+### 8.1 Requisitos de Sistema
+
+**Sistema Operacional:** O projeto funciona em Linux, macOS e Windows. Os exemplos de comandos a seguir assumem Linux/macOS, mas equivalentes Windows são fornecidos quando necessário.
+
+**Python:** É necessário Python 3.8 ou superior. Recomenda-se Python 3.10 ou 3.11 para melhor compatibilidade. Você pode verificar sua versão com:
+
+```bash
+python --version
+```
+
+ou
+
+```bash
+python3 --version
+```
+
+**Espaço em Disco:** Reserve pelo menos 500 MB para o projeto, dependências e banco de dados de experimentos.
+
+**Memória RAM:** Mínimo de 4 GB, recomendado 8 GB para executar experimentos maiores.
+
+### 8.2 Obtenção do Código
+
+Se o projeto está em um repositório Git:
+
+```bash
+git clone <url-do-repositorio>
+cd projeto2_haversine
+```
+
+Se você recebeu um arquivo compactado:
+
+```bash
+unzip projeto2_haversine.zip
+cd projeto2_haversine
+```
+
+ou
+
+```bash
+tar -xzf projeto2_haversine.tar.gz
+cd projeto2_haversine
+```
+
+### 8.3 Ambiente Virtual
+
+Criar um ambiente virtual é altamente recomendado para isolar as dependências do projeto. Isso evita conflitos com outros projetos Python em seu sistema.
+
+**No Linux ou macOS:**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Após executar o segundo comando, você verá `(venv)` no início do seu prompt, indicando que o ambiente virtual está ativo.
+
+**No Windows:**
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+Para desativar o ambiente virtual quando terminar de trabalhar:
+
+```bash
+deactivate
+```
+
+### 8.4 Instalação de Dependências
+
+Com o ambiente virtual ativado, instale todas as dependências do projeto:
+
+```bash
+pip install -r requirements.txt
+```
+
+Este comando instalará:
+
+- **numpy**: Computação numérica e arrays
+- **matplotlib**: Geração de gráficos e visualizações estáticas
+- **pygame**: Interface gráfica em tempo real
+- **folium**: Geração de mapas interativos
+- **fastapi**: Framework para API REST
+- **uvicorn**: Servidor ASGI para rodar a API
+- **sqlalchemy**: ORM para persistência de dados
+- **pydantic**: Validação de dados
+- **streamlit**: Framework para interface web
+- **pandas**: Manipulação de dados tabulares
+- **pytest**: Framework de testes
+- **requests**: Cliente HTTP para requisições à API
+
+A instalação pode levar alguns minutos dependendo da sua conexão com a internet.
+
+### 8.5 Verificação da Instalação
+
+Para verificar se tudo foi instalado corretamente:
+
+```bash
+python -c "import numpy, matplotlib, pygame, folium, fastapi, streamlit; print('Todas as dependências OK')"
+```
+
+Se este comando executar sem erros, a instalação foi bem-sucedida.
+
+### 8.6 Estrutura de Diretórios
+
+Após a instalação, verifique se a estrutura de diretórios está completa:
+
+```bash
+ls -la
+```
+
+Você deve ver os diretórios: `src/`, `data/`, `tests/`, `assets/` e os arquivos `main.py`, `requirements.txt`, `README.md`, entre outros.
+
+### 8.7 Execução com Docker
+
+O projeto inclui configuração completa para execução em containers Docker, incluindo servidor Ollama com modelo Gemma3 para inferência local de LLM.
+
+**Pré-requisitos Docker:**
+
+- Docker Engine 20.10+
+- Docker Compose V2
+- (Opcional) NVIDIA Docker para GPU support
+
+**Quick Start com Docker:**
+
+```bash
+# Opção 1: Com GPU NVIDIA
+docker-compose -f docker/docker-compose.yml up -d --build
+
+# Opção 2: Sem GPU (CPU only)
+docker-compose -f docker/docker-compose.cpu.yml up -d --build
+```
+
+**Serviços disponíveis:**
+
+Após iniciar os containers:
+
+- **API FastAPI**: http://localhost:8000
+  - Documentação: http://localhost:8000/docs
+- **Web Dashboard**: http://localhost:8501
+- **Ollama Server**: http://localhost:11434
+
+**Testando Ollama com Gemma3:**
+
+```bash
+# Verificar modelos disponíveis
+curl http://localhost:11434/api/tags
+
+# Fazer pergunta ao Gemma3
+curl http://localhost:11434/api/generate -d '{
+  "model": "gemma2:latest",
+  "prompt": "Explain genetic algorithms briefly",
+  "stream": false
+}'
+```
+
+**Gerenciamento dos containers:**
+
+```bash
+# Ver logs
+docker-compose -f docker/docker-compose.yml logs -f
+
+# Parar serviços
+docker-compose -f docker/docker-compose.yml down
+
+# Parar e remover volumes
+docker-compose -f docker/docker-compose.yml down -v
+
+# Ver status
+docker-compose -f docker/docker-compose.yml ps
+```
+
+**Arquivos Docker:**
+
+Todos os arquivos de configuração Docker estão em `docker/`:
+
+- `Dockerfile` - Imagem principal (API + Web)
+- `Dockerfile.ollama` - Imagem Ollama com Gemma3
+- `docker-compose.yml` - Orquestração com GPU
+- `docker-compose.cpu.yml` - Orquestração sem GPU
+- `entrypoint.sh` - Script de inicialização
+- `ollama-entrypoint.sh` - Script Ollama
+- `README.md` - Documentação completa Docker
+
+**Publicando no Docker Hub:**
+
+```bash
+# Build com tag
+docker build -t seu-usuario/ga-vrp-app:2.0.0 -f docker/Dockerfile .
+
+# Login
+docker login
+
+# Push
+docker push seu-usuario/ga-vrp-app:2.0.0
+```
+
+**Notas importantes:**
+
+- Primeiro start pode demorar: Gemma3 (~2GB) será baixado automaticamente
+- Modelos Ollama ficam persistidos em volume Docker
+- Banco SQLite é compartilhado entre API e Web
+- Para mais detalhes, consulte `docker/README.md`
+
+## 9. Guia Completo de Execução
+
+Esta seção detalha todos os modos de execução disponíveis, com exemplos práticos e explicações de cada parâmetro.
+
+### 9.1 Execução Básica via Terminal
+
+O modo mais simples de executar o sistema é através do script principal `main.py`. Este modo executa a otimização e exibe os resultados diretamente no terminal.
+
+**Comando básico:**
+
 ```bash
 python main.py --mode basic
 ```
 
-#### **Visualização Interativa (Pygame)**
-Abre a interface Pygame para visualização em tempo real:
-```bash
-python main.py --mode visual
-```
+**O que acontece:**
 
-#### **Modo Experimento**
-Compara o desempenho de diferentes operadores genéticos:
-```bash
-python main.py --mode experiment
-```
+1. O sistema carrega o cenário padrão (medium) com aproximadamente 20 hospitais
+2. Inicializa uma população de 100 indivíduos
+3. Executa o Algoritmo Genético por até 200 gerações
+4. Exibe o progresso no terminal: número da geração, melhor fitness, tempo decorrido
+5. Ao finalizar, mostra um resumo completo:
+   - Melhor fitness alcançado
+   - Distância total percorrida
+   - Número de rotas criadas
+   - Distribuição de paradas por veículo
+   - Tempo total de execução
+6. Gera um mapa HTML com as rotas otimizadas
 
-#### **Gerar Mapa HTML**
-Executa otimização e gera o mapa interativo `mapa_rotas_hospitais_sp.html`:
-```bash
-python main.py --mode map
-```
+**Modo silencioso:**
 
-#### **Modo Silencioso**
-Executa sem logs detalhados:
+Se você não quiser ver os logs detalhados durante a execução:
+
 ```bash
 python main.py --mode basic --quiet
 ```
 
-### 9.4. Executar API REST (Backend)
+Neste modo, apenas o resultado final é exibido.
 
-Inicie o servidor FastAPI para acesso programático:
+### 9.2 Visualização em Tempo Real
+
+Para acompanhar visualmente a evolução do algoritmo:
 
 ```bash
-# Modo desenvolvimento (com auto-reload)
-uvicorn src.api.main:app --reload --port 8000
-
-# Modo produção
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+python main.py --mode visual
 ```
 
-**Acesse a documentação interativa:**
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+**O que acontece:**
 
-**Exemplos de uso:**
+1. Uma janela gráfica Pygame é aberta
+2. Você vê a tela dividida conforme descrito na seção 7.2
+3. O algoritmo começa automaticamente
+4. Você pode pausar, resumir ou parar a qualquer momento
+5. Ao pausar, pode inspecionar detalhes da solução atual
+6. Ao finalizar, pode salvar o resultado ou fechar a janela
+
+**Controles da interface Pygame:**
+
+- Barra de espaço: Pausar/Continuar
+- Esc: Parar execução
+- S: Salvar melhor solução
+- Setas: Ajustar velocidade de visualização
+- Scroll do mouse: Zoom no mapa
+- Clique e arraste: Mover o mapa
+
+### 9.3 Modo Experimento
+
+Este modo é útil para comparar diferentes configurações de operadores genéticos:
 
 ```bash
-# Criar experimento
+python main.py --mode experiment
+```
+
+**O que acontece:**
+
+1. O sistema executa o algoritmo múltiplas vezes com diferentes combinações de operadores
+2. Para cada combinação (seleção × crossover × mutação), registra:
+   - Melhor fitness
+   - Tempo de execução
+   - Número de gerações até convergência
+3. Ao finalizar, gera:
+   - Tabela comparativa no terminal
+   - Gráficos de desempenho salvos como imagens
+   - Arquivo CSV com todos os resultados
+
+Este modo pode levar bastante tempo (horas) dependendo de quantas combinações você configurar para testar.
+
+### 9.4 Geração de Mapa
+
+Se você já executou o algoritmo e quer apenas gerar o mapa interativo:
+
+```bash
+python main.py --mode map
+```
+
+**O que acontece:**
+
+1. Executa uma otimização rápida
+2. Gera o arquivo `mapa_rotas_hospitais_sp.html`
+3. Você pode abrir este arquivo em qualquer navegador
+
+O mapa gerado é standalone - pode ser compartilhado e aberto em qualquer computador sem precisar do Python instalado.
+
+### 9.5 Executando a API REST
+
+Para disponibilizar o sistema como serviço web:
+
+**Inicie o servidor API:**
+
+```bash
+uvicorn src.api.main:app --reload --port 8000
+```
+
+**Parâmetros explicados:**
+
+- `src.api.main:app`: Caminho para a aplicação FastAPI
+- `--reload`: Reinicia automaticamente quando o código é modificado (útil para desenvolvimento)
+- `--port 8000`: Porta onde o servidor vai escutar
+
+**O que você verá:**
+
+```
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process
+INFO:     Started server process
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+**Acessando a documentação:**
+
+Abra seu navegador e acesse:
+
+- Documentação Swagger UI: http://localhost:8000/docs
+- Documentação ReDoc: http://localhost:8000/redoc
+
+Na interface Swagger, você pode testar todos os endpoints diretamente do navegador.
+
+**Criando um experimento via API:**
+
+```bash
 curl -X POST http://localhost:8000/run \
   -H "Content-Type: application/json" \
   -d '{
@@ -584,143 +838,427 @@ curl -X POST http://localhost:8000/run \
     "crossover_method": "order_crossover",
     "mutation_method": "inversion"
   }'
+```
 
-# Listar experimentos
-curl http://localhost:8000/experiments
+**Resposta esperada:**
 
-# Ver experimento específico
+```json
+{
+  "id": 1,
+  "status": "pending",
+  "message": "Experimento iniciado."
+}
+```
+
+**Consultando o experimento:**
+
+```bash
 curl http://localhost:8000/experiments/1
+```
 
-# Limpar histórico de falhados
+**Listando todos os experimentos:**
+
+```bash
+curl http://localhost:8000/experiments
+```
+
+**Removendo experimentos falhados:**
+
+```bash
 curl -X DELETE http://localhost:8000/experiments/failed
 ```
 
-### 9.5. Executar Interface Web (Streamlit)
+### 9.6 Executando a Interface Web
 
-Inicie a interface web moderna:
+Para iniciar o dashboard web Streamlit:
 
 ```bash
 streamlit run src/web/app.py
 ```
 
-**Acesse no navegador:** http://localhost:8501
+**O que você verá no terminal:**
 
-**Funcionalidades disponíveis:**
-- Dashboard com métricas globais
-- Configurador visual de todos os parâmetros
-- Execução de experimentos (modo background ou interativo)
-- Visualização de histórico
-- Limpeza de experimentos
-- Análise detalhada de resultados
+```
+  You can now view your Streamlit app in your browser.
 
-### 9.6. Executar Testes Automatizados
-
-Execute a suite completa de testes:
-
-```bash
-# Todos os testes
-pytest tests/
-
-# Com verbose
-pytest tests/ -v
-
-# Teste específico
-pytest tests/test_ga_operators.py -v
-
-# Com cobertura (requer pytest-cov)
-pip install pytest-cov
-pytest tests/ --cov=src --cov-report=html
-
-# Abrir relatório de cobertura
-open htmlcov/index.html  # macOS
-xdg-open htmlcov/index.html  # Linux
-start htmlcov/index.html  # Windows
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.1.100:8501
 ```
 
-### 9.7. Workflow Completo Recomendado
+**Acesse:** http://localhost:8501
 
-Para uma experiência completa do sistema:
+**Primeira vez acessando:**
 
-1. **Terminal 1** - Inicie a API:
-   ```bash
-   uvicorn src.api.main:app --reload --port 8000
-   ```
+1. Você verá o logo "Saudelog" no topo
+2. A navegação mostra: Dashboard, Nova Execução, Análise Detalhada, Gerador Logístico, Configurações
+3. Se nenhum experimento foi executado ainda, o Dashboard estará vazio
+4. Clique em "Nova Execução" para criar seu primeiro experimento
 
-2. **Terminal 2** - Inicie a Interface Web:
-   ```bash
-   streamlit run src/web/app.py
-   ```
+**Criando um experimento pela interface web:**
 
-3. **Navegador** - Acesse:
-   - Interface Web: http://localhost:8501
-   - API Docs: http://localhost:8000/docs
+1. Vá para "Nova Execução"
+2. Escolha o cenário "small" (mais rápido para testar)
+3. Mantenha os parâmetros padrão ou ajuste conforme desejar
+4. Clique em "Executar em Background"
+5. Você verá uma mensagem de confirmação
+6. Volte para o Dashboard e atualize a página
+7. O experimento aparecerá na tabela
 
-4. **Configure e Execute:**
-   - Use a interface web para configurar parâmetros
-   - Execute experimentos via web ou API
-   - Visualize resultados em tempo real (Pygame) ou no dashboard
-   - Consulte histórico e compare configurações
+**Executando com visualização:**
 
-## 10. Conclusão
+1. Configure os parâmetros
+2. Clique em "Executar com Visualização"
+3. Uma janela Pygame será aberta automaticamente
+4. Acompanhe a execução em tempo real
 
-Este projeto demonstrou a eficácia dos **Algoritmos Genéticos** na resolução de um problema complexo de otimização logística do mundo real: a distribuição de medicamentos e insumos hospitalares no estado de São Paulo. A implementação de **24 operadores genéticos** (8 de seleção, 8 de crossover e 8 de mutação) permitiu uma análise empírica aprofundada sobre quais combinações são mais adequadas para o problema de roteamento de veículos com múltiplas restrições.
+### 9.7 Workflow Recomendado
 
-**Principais Contribuições do Projeto:**
+Para uma experiência completa e profissional, execute o sistema em modo completo:
 
-1. **Arquitetura Profissional Completa:**
-   - Backend robusto com API REST (FastAPI)
-   - Persistência de dados com SQLAlchemy e SQLite
-   - Frontend moderno com Streamlit
-   - Camada de controle (MVC) bem estruturada
-   - Suite completa de testes automatizados (pytest)
+**Terminal 1 - API:**
 
-2. **Múltiplas Abordagens de Operadores:**
-   - Implementação detalhada de 8 variantes de cada tipo de operador
-   - Comparação empírica de desempenho
-   - Documentação acadêmica completa
-   - Código modular e extensível
+```bash
+# Ative o ambiente virtual
+source venv/bin/activate
 
-3. **Visualizações Ricas e Interativas:**
-   - Mapas reais de São Paulo com Folium/Leaflet.js
-   - Interface em tempo real com Pygame
-   - Dashboard web com métricas e análises
-   - Exportação de resultados em múltiplos formatos
+# Inicie a API
+uvicorn src.api.main:app --reload --port 8000
+```
 
-4. **Dados Reais e Validação:**
-   - 25+ hospitais reais do estado de São Paulo
-   - Coordenadas GPS precisas
-   - Prioridades de entrega (crítico, urgente, regular)
-   - Cálculo de distância geodésica (Haversine)
-   - Múltiplos cenários de teste (small, medium, large, critical)
+Deixe este terminal rodando.
 
-5. **Reprodutibilidade Científica:**
-   - Histórico completo de experimentos no banco de dados
-   - Configurações parametrizáveis
-   - Testes automatizados garantindo qualidade
-   - Documentação detalhada (README + CLAUDE.md)
+**Terminal 2 - Interface Web:**
+
+Abra um novo terminal na mesma pasta do projeto.
+
+```bash
+# Ative o ambiente virtual (no novo terminal)
+source venv/bin/activate
+
+# Inicie a interface web
+streamlit run src/web/app.py
+```
+
+Deixe este terminal rodando também.
+
+**Navegador:**
+
+1. Abra uma aba em: http://localhost:8501 (Interface Web)
+2. Abra outra aba em: http://localhost:8000/docs (Documentação da API)
+
+**Usando o sistema:**
+
+1. Na interface web, configure um experimento
+2. Execute em background ou com visualização
+3. Acompanhe o progresso
+4. Consulte resultados no Dashboard
+5. Se quiser, use a API diretamente para automação
+
+**Para parar tudo:**
+
+- Em cada terminal, pressione `Ctrl+C`
+- Desative o ambiente virtual com `deactivate`
+
+### 9.8 Configuração Customizada
+
+Você pode criar arquivos de configuração JSON para reutilizar configurações específicas:
+
+**Crie um arquivo `minha_config.json`:**
+
+```json
+{
+  "population_size": 120,
+  "max_generations": 300,
+  "crossover_rate": 0.85,
+  "mutation_rate": 0.2,
+  "selection_method": "tournament",
+  "crossover_method": "partially_mapped_crossover",
+  "mutation_method": "2-opt",
+  "scenario": "large",
+  "num_vehicles": 4,
+  "vehicle_capacity": 120.0,
+  "w_distance": 1.0,
+  "w_priority": 15.0,
+  "w_capacity": 150.0
+}
+```
+
+**Execute com esta configuração:**
+
+```bash
+python main.py --mode visual --config minha_config.json
+```
+
+### 9.9 Cenários Disponíveis
+
+O sistema vem com quatro cenários pré-configurados:
+
+**Small (pequeno):**
+- Aproximadamente 10 hospitais
+- 2 veículos
+- Tempo de execução: 1-2 minutos
+- Ideal para: Testes rápidos, aprendizado, debug
+
+**Medium (médio):**
+- Aproximadamente 20 hospitais
+- 3 veículos
+- Tempo de execução: 3-5 minutos
+- Ideal para: Demonstrações, experimentos padrão
+
+**Large (grande):**
+- Todos os hospitais disponíveis (25+)
+- 4-5 veículos
+- Tempo de execução: 10-20 minutos
+- Ideal para: Análise completa, benchmarking
+
+**Critical (crítico):**
+- Apenas hospitais com entregas críticas
+- 2-3 veículos
+- Tempo de execução: 2-4 minutos
+- Ideal para: Situações de emergência, priorização máxima
+
+**Especificando o cenário:**
+
+Via terminal:
+```bash
+python main.py --mode basic --scenario large
+```
+
+Via API:
+```json
+{
+  "scenario": "critical"
+}
+```
+
+Via interface web: Selecione no dropdown "Configuração de Cenário"
+
+## 10. Testes Automatizados
+
+O projeto inclui uma suite completa de testes para garantir qualidade e confiabilidade.
+
+### 10.1 Organização dos Testes
+
+Os testes estão organizados em 8 arquivos, cada um focando em uma área específica:
+
+**test_ga_core.py:** Testa o núcleo do algoritmo genético
+- Criação de cromossomos
+- Validação de permutações
+- Construção de rotas
+- Gerenciamento de veículos
+- Divisão correta quando restrições são violadas
+
+**test_ga_operators.py:** Testa todos os 24 operadores genéticos
+- Cada operador de seleção (8 testes)
+- Cada operador de crossover (8 testes)
+- Cada operador de mutação (8 testes)
+- Validação de que permutações permanecem válidas após operações
+
+**test_ga_fitness.py:** Testa a função de fitness
+- Cálculo correto de distâncias
+- Aplicação de penalidades
+- Função multi-objetivo
+- Casos extremos
+
+**test_ga_integration.py:** Testes de integração completa
+- Execução ponta a ponta do algoritmo
+- Convergência
+- Melhoria do fitness ao longo de gerações
+- Diferentes configurações
+
+**test_api.py:** Testa os endpoints da API
+- Validação de schemas com Pydantic
+- Respostas HTTP corretas
+- Tratamento de erros
+- Serialização JSON
+
+**test_api_execution.py:** Testa execuções via API
+- Criação de experimentos
+- Execução em background
+- Atualização de status
+- Persistência de resultados
+
+**test_controller.py:** Testa o ExperimentManager
+- CRUD de experimentos
+- Execução assíncrona
+- Gerenciamento de cenários
+- Tratamento de exceções
+
+**test_database.py:** Testa a camada de persistência
+- Modelos SQLAlchemy
+- Operações de banco de dados
+- Integridade de dados
+- Transações
+
+### 10.2 Executando os Testes
+
+**Todos os testes:**
+
+```bash
+pytest tests/
+```
+
+**Com saída detalhada:**
+
+```bash
+pytest tests/ -v
+```
+
+**Saída típica:**
+
+```
+tests/test_ga_core.py::test_chromosome_creation PASSED
+tests/test_ga_core.py::test_route_division PASSED
+tests/test_ga_operators.py::test_tournament_selection PASSED
+tests/test_ga_operators.py::test_pmx_crossover PASSED
+...
+================================ 67 passed in 12.34s ================================
+```
+
+**Teste específico:**
+
+```bash
+pytest tests/test_ga_operators.py -v
+```
+
+**Teste individual:**
+
+```bash
+pytest tests/test_ga_operators.py::test_tournament_selection -v
+```
+
+**Com cobertura de código:**
+
+Primeiro, instale a extensão:
+
+```bash
+pip install pytest-cov
+```
+
+Execute com relatório de cobertura:
+
+```bash
+pytest tests/ --cov=src --cov-report=html
+```
+
+Isso gera um relatório HTML em `htmlcov/`. Abra-o com:
+
+```bash
+# Linux
+xdg-open htmlcov/index.html
+
+# macOS
+open htmlcov/index.html
+
+# Windows
+start htmlcov/index.html
+```
+
+**Testes em modo watch (re-executa quando código muda):**
+
+Instale pytest-watch:
+
+```bash
+pip install pytest-watch
+```
+
+Execute:
+
+```bash
+ptw tests/
+```
+
+### 10.3 Interpretando Resultados
+
+**PASSED:** Teste executado com sucesso, comportamento esperado confirmado.
+
+**FAILED:** Teste falhou. O pytest mostrará:
+- Qual asserção falhou
+- Valores esperados vs obtidos
+- Traceback completo
+
+**SKIPPED:** Teste foi pulado (geralmente por estar marcado com @pytest.mark.skip).
+
+**ERROR:** Erro durante a execução do teste (não no código testado, mas no próprio teste).
+
+**Exemplo de falha:**
+
+```
+FAILED tests/test_ga_operators.py::test_pmx_crossover - AssertionError: assert [1, 2, 3] == [1, 3, 2]
+```
+
+Isso indica que o teste esperava `[1, 3, 2]` mas obteve `[1, 2, 3]`.
+
+### 10.4 Escrevendo Novos Testes
+
+Se você modificar o código, adicione testes correspondentes. Exemplo básico:
+
+```python
+def test_nova_funcionalidade():
+    # Arrange (preparar)
+    entrada = preparar_dados()
+
+    # Act (executar)
+    resultado = minha_funcao(entrada)
+
+    # Assert (verificar)
+    assert resultado == valor_esperado
+```
+
+Execute o novo teste:
+
+```bash
+pytest tests/test_novo_modulo.py::test_nova_funcionalidade -v
+```
+
+## 11. Conclusão
+
+Este projeto demonstra a aplicação de Algoritmos Genéticos em um problema real de otimização logística, com complexidade comparável a desafios encontrados em operações empresariais. A solução vai além de uma implementação acadêmica básica, oferecendo uma arquitetura profissional completa com API REST, persistência de dados, interface web moderna e testes automatizados.
+
+**Principais Realizações:**
+
+**Arquitetura de Produção:** O sistema implementa separação clara de responsabilidades através do padrão MVC, com camadas de modelo, visão e controle bem definidas. A API REST permite integração com outros sistemas, enquanto a interface web oferece usabilidade para usuários não técnicos.
+
+**Implementação Completa de Operadores:** Os 24 operadores genéticos implementados (8 de seleção, 8 de crossover e 8 de mutação) fornecem uma base sólida para análise comparativa e pesquisa. Cada operador foi implementado seguindo a literatura acadêmica correspondente, com validações que garantem a integridade das permutações.
+
+**Visualizações Profissionais:** As três formas de visualização atendem diferentes necessidades - mapas interativos HTML para apresentações e análise geográfica, interface Pygame para acompanhamento da evolução em tempo real, e dashboard web Streamlit para gestão executiva e análise de resultados.
+
+**Dados e Validação Reais:** O uso de coordenadas GPS reais de hospitais de São Paulo, combinado com o cálculo de distâncias geodésicas via fórmula de Haversine, garante que os resultados sejam aplicáveis ao mundo real. As prioridades de entrega refletem decisões logísticas reais onde medicamentos críticos não podem esperar.
+
+**Qualidade e Manutenibilidade:** A suite de testes automatizados com 8 arquivos de teste cobrindo desde unidades individuais até integração completa garante que modificações futuras não quebrem funcionalidades existentes. A documentação detalhada facilita compreensão e manutenção.
 
 **Aplicabilidade Prática:**
 
-O sistema desenvolvido pode ser utilizado em cenários reais de logística hospitalar, considerando não apenas a minimização de distâncias, mas também:
-- **Priorização de entregas críticas** (medicamentos emergenciais)
-- **Restrições de capacidade e autonomia** dos veículos
-- **Múltiplos veículos** operando simultaneamente
-- **Escalabilidade** para diferentes tamanhos de problema
+O sistema pode ser utilizado em cenários reais de logística hospitalar. A função de fitness multi-objetivo permite balancear diferentes prioridades conforme as necessidades específicas de cada situação. Em uma emergência, pode-se aumentar drasticamente o peso de prioridade para garantir que medicamentos críticos sejam entregues primeiro. Em operações regulares, pode-se equilibrar melhor entre distância e prioridade.
 
-**Impacto Acadêmico:**
+A capacidade de executar experimentos em background via API permite automação completa. É possível, por exemplo, executar otimizações automaticamente toda noite para planejar as rotas do dia seguinte, ou executar múltiplas configurações em paralelo para encontrar a melhor para uma situação específica.
 
-Este projeto atende plenamente aos requisitos do **FIAP Tech Challenge Fase 2**, demonstrando:
-- Domínio de meta-heurísticas (Algoritmos Genéticos)
-- Implementação de arquitetura moderna (MVC, API REST, ORM)
-- Boas práticas de engenharia de software (testes, modularização, documentação)
-- Aplicação prática em problema de relevância social (saúde pública)
+**Contribuição Acadêmica:**
 
-O código está **pronto para produção**, com mais de **14.000 linhas** de implementação robusta, testada e documentada.
+Para o contexto do FIAP Tech Challenge Fase 2, o projeto demonstra:
 
-## 11. Referências
+- Domínio de meta-heurísticas aplicadas a problemas de otimização combinatória
+- Capacidade de implementar arquiteturas de software modernas e escaláveis
+- Conhecimento de boas práticas de engenharia de software (testes, modularização, documentação)
+- Habilidade de comunicar soluções técnicas através de visualizações e interfaces intuitivas
+- Aplicação prática de conhecimentos teóricos em problemas de relevância social
 
-[1] Toth, P., & Vigo, D. (Eds.). (2014). *Vehicle routing: problems, methods, and applications*. Society for Industrial and Applied Mathematics.
+O código está estruturado para extensão futura. Novos operadores genéticos podem ser adicionados facilmente seguindo os padrões estabelecidos. Novos tipos de restrições (janelas de tempo estritas, múltiplos depósitos, cargas especiais) podem ser incorporados na função de fitness. A arquitetura permite que o sistema evolua conforme necessidades futuras.
 
-[2] Goldberg, D. E. (1989). *Genetic Algorithms in Search, Optimization, and Machine Learning*. Addison-Wesley.
+Com mais de 14.000 linhas de código implementadas e testadas, o projeto representa um trabalho significativo que combina teoria de algoritmos evolutivos, engenharia de software e aplicação prática em logística de saúde.
 
-[3] Eiben, A. E., & Smith, J. E. (2015). *Introduction to Evolutionary Computing*. Springer.
+## 12. Referências
+
+[1] Toth, P., & Vigo, D. (Eds.). (2014). Vehicle routing: problems, methods, and applications. Society for Industrial and Applied Mathematics.
+
+[2] Goldberg, D. E. (1989). Genetic Algorithms in Search, Optimization, and Machine Learning. Addison-Wesley.
+
+[3] Eiben, A. E., & Smith, J. E. (2015). Introduction to Evolutionary Computing. Springer.
+
+[4] Laporte, G. (2009). Fifty years of vehicle routing. Transportation Science, 43(4), 408-416.
+
+[5] Bräysy, O., & Gendreau, M. (2005). Vehicle routing problem with time windows, Part I: Route construction and local search algorithms. Transportation Science, 39(1), 104-118.
+
+[6] Potvin, J. Y. (1996). Genetic algorithms for the traveling salesman problem. Annals of Operations Research, 63(3), 337-370.
+
+[7] Baker, B. M., & Ayechew, M. A. (2003). A genetic algorithm for the vehicle routing problem. Computers & Operations Research, 30(5), 787-800.
