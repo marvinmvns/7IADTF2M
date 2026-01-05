@@ -1027,9 +1027,11 @@ elif page == "Análise Detalhada":
                                 # Mapa de ID (str) -> Dados
                                 id_map = {str(p['id']): p for p in points_db}
                                 
-                                # DEBUG: Verificar chaves do id_map
-                                # st.write("Exemplo chaves id_map:", list(id_map.keys())[:5])
-                                
+                                # Verifica se há rotas sem dados de trajeto (pontos ou stops)
+                                missing_data = any(not r.get('points') and not r.get('stops') for r in routes)
+                                if missing_data:
+                                    st.warning("⚠️ Este experimento contém rotas sem dados de trajeto processados. A visualização pode estar incompleta.")
+
                                 import folium
                                 from streamlit_folium import st_folium
                                 
@@ -1040,10 +1042,10 @@ elif page == "Análise Detalhada":
                                 depot_pt = next((p for p in points_db if p['type'] == 'depot'), None)
                                 
                                 # MAPA BASE: CartoDB Dark Matter (Requisito: Fundo Escuro)
-                                # Inicializa sem centro, ajustaremos com fit_bounds
-                                avg_lat = sum(p['lat'] for p in points_db) / len(points_db)
-                                avg_lon = sum(p['lon'] for p in points_db) / len(points_db)
-                                m_res = folium.Map(location=[avg_lat, avg_lon], zoom_start=11, tiles='CartoDB dark_matter')
+                                # MAPA BASE: CartoDB Dark Matter (Requisito: Fundo Escuro)
+                                # Inicializa com Foco no ESTADO DE SÃO PAULO (Pedido do Usuário - Zoom Fixo)
+                                # Centro aproximado de SP: -22.5, -48.0
+                                m_res = folium.Map(location=[-22.5, -48.0], zoom_start=7, tiles='CartoDB dark_matter')
                                 
                                 # 1. Desenha TODOS os pontos com MARCADORES (Pins)
                                 for pt in points_db:
@@ -1077,7 +1079,12 @@ elif page == "Análise Detalhada":
                                 
                                 # 2. Desenha as Rotas
                                 for i, r in enumerate(routes):
-                                    path_ids = r.get('points', [])
+                                    # Tenta recuperar IDs dos pontos (Compatibilidade)
+                                    path_ids = r.get('points')
+                                    if not path_ids and 'stops' in r:
+                                        # Fallback: Extrai IDs de 'stops' (experiments 396/398)
+                                        path_ids = [s.get('id') for s in r.get('stops', [])]
+                                        
                                     if not path_ids: continue # Pula rotas vazias
 
                                     route_color = COLORS[i % len(COLORS)]
@@ -1100,38 +1107,46 @@ elif page == "Análise Detalhada":
                                     if depot_pt:
                                         coords.append([depot_pt['lat'], depot_pt['lon']])
                                     
+                                    # Cria grupo para a rota (Camada Interativa)
+                                    route_name = f"Rota {i+1} (Veículo {r.get('vehicle_id')})"
+                                    route_fg = folium.FeatureGroup(name=route_name)
+                                    
                                     if len(coords) > 1:
-                                        # 1. Linha Sólida Base (Como no RouteVisualizer)
+                                        # 1. Linha Sólida Base
                                         folium.PolyLine(
                                             locations=coords,
                                             weight=3,
                                             color=route_color,
                                             opacity=0.8,
                                             tooltip=f"Rota Base Veículo {r.get('vehicle_id')}"
-                                        ).add_to(m_res)
+                                        ).add_to(route_fg)
 
                                         # 2. AntPath por cima (Animação)
                                         plugins.AntPath(
                                             locations=coords,
-                                            weight=4, # Um pouco maior que a base
-                                            color=route_color, # Mesma cor da rota
-                                            opacity=0.9,
-                                            dash_array=[10, 20],
                                             delay=1000,
-                                            pulse_color=route_color, # Pulso da MESMA cor
+                                            pulse_color=route_color,
                                             hardware_acceleration=False,
                                             tooltip=f"Fluxo Veículo {r.get('vehicle_id')}"
-                                        ).add_to(m_res)
+                                        ).add_to(route_fg)
+                                    
+                                    # Adiciona grupo ao mapa
+                                    route_fg.add_to(m_res)
                                 
-                                # Ajusta Zoom para caber todas as rotas
-                                if all_route_points:
-                                    m_res.fit_bounds(all_route_points)
+                                # REMOVIDO: Ajuste de Zoom Automático (fit_bounds)
+                                # O usuário solicitou zoom fixo no estado de SP.
+                                # all_points_coords = [[p['lat'], p['lon']] for p in points_db]
+                                # if all_points_coords:
+                                #     m_res.fit_bounds(all_points_coords, padding=(50, 50))
                                 
-                                # 3. LEGENDA ESCURA (High Contrast)
+                                # Adiciona controle de camadas (LayerControl) para ligar/desligar rotas
+                                folium.LayerControl(collapsed=False).add_to(m_res)
+                                
+                                # 3. LEGENDA ESCURA (Apenas Marcadores agora) - LADO ESQUERDO
                                 legend_html = '''
                                 <div style="position: fixed; 
-                                            bottom: 20px; right: 20px; 
-                                            width: 170px;
+                                            bottom: 30px; left: 20px; 
+                                            width: 150px;
                                             background-color: #1a1a1a; 
                                             color: #ffffff;
                                             border: 2px solid #555; 
@@ -1147,14 +1162,9 @@ elif page == "Análise Detalhada":
                                     <div style="margin-bottom: 3px;"><span style="color: #ff9900;">●</span> Urgente</div>
                                     <div style="margin-bottom: 3px;"><span style="color: #33cc33;">●</span> Regular</div>
                                     <hr style="margin: 8px 0; border-color: #444;">
-                                    <h6 style="margin: 5px 0; color: #ccc;">Rotas Ativas:</h6>
+                                    <div style="font-size: 11px; color: #aaa;">* Controle as rotas no menu de camadas (topo direito)</div>
+                                </div>
                                 '''
-                                for i, r in enumerate(routes):
-                                    if not r.get('points'): continue
-                                    c = COLORS[i % len(COLORS)]
-                                    legend_html += f'<div style="margin-bottom: 2px;"><span style="color: {c}; font-weight: bold; font-size: 14px;">━━━</span> Veículo {r.get("vehicle_id")}</div>'
-                                
-                                legend_html += '</div>'
                                 m_res.get_root().html.add_child(folium.Element(legend_html))
 
                                 st.subheader("🗺️ Visualização Geográfica (Estilo Padrão)")
@@ -1163,7 +1173,6 @@ elif page == "Análise Detalhada":
                         except Exception as e:
                             st.warning(f"Não foi possível gerar o mapa da rota: {e}")
                             
-                        st.subheader("📋 Detalhes das Rotas")
                         st.subheader("📋 Detalhes das Rotas")
                         
                         # Agrupa rotas por Veículo

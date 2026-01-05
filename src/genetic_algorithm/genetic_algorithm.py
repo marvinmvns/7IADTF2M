@@ -411,6 +411,7 @@ class GeneticAlgorithm:
                 'demand': route.total_demand,
                 'load': route.total_demand, # Alias para compatibilidade
                 'capacity_used': route.total_demand / route.vehicle.capacity * 100,
+                'points': [p.id for p in route.points], # Lista de IDs para visualização
                 'stops': [
                     {
                         "id": p.id,

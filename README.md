@@ -792,107 +792,9 @@ docker push seu-usuario/ga-vrp-app:2.0.0
 
 ## 10. Guia Completo de Execução
 
-Esta seção detalha todos os modos de execução disponíveis, com exemplos práticos e explicações de cada parâmetro.
+Esta seção detalha os modos de execução disponíveis: Docker, API REST e Interface Web.
 
-### 10.1 Execução Básica via Terminal
-
-O modo mais simples de executar o sistema é através do script principal `main.py`. Este modo executa a otimização e exibe os resultados diretamente no terminal.
-
-**Comando básico:**
-
-```bash
-python main.py --mode basic
-```
-
-**O que acontece:**
-
-1. O sistema carrega o cenário padrão (medium) com aproximadamente 20 hospitais
-2. Inicializa uma população de 100 indivíduos
-3. Executa o Algoritmo Genético por até 200 gerações
-4. Exibe o progresso no terminal: número da geração, melhor fitness, tempo decorrido
-5. Ao finalizar, mostra um resumo completo:
-   - Melhor fitness alcançado
-   - Distância total percorrida
-   - Número de rotas criadas
-   - Distribuição de paradas por veículo
-   - Tempo total de execução
-6. Gera um mapa HTML com as rotas otimizadas
-
-**Modo silencioso:**
-
-Se você não quiser ver os logs detalhados durante a execução:
-
-```bash
-python main.py --mode basic --quiet
-```
-
-Neste modo, apenas o resultado final é exibido.
-
-### 10.2 Visualização em Tempo Real
-
-Para acompanhar visualmente a evolução do algoritmo:
-
-```bash
-python main.py --mode visual
-```
-
-**O que acontece:**
-
-1. Uma janela gráfica Pygame é aberta
-2. Você vê a tela dividida conforme descrito na seção 7.2
-3. O algoritmo começa automaticamente
-4. Você pode pausar, resumir ou parar a qualquer momento
-5. Ao pausar, pode inspecionar detalhes da solução atual
-6. Ao finalizar, pode salvar o resultado ou fechar a janela
-
-**Controles da interface Pygame:**
-
-- Barra de espaço: Pausar/Continuar
-- Esc: Parar execução
-- S: Salvar melhor solução
-- Setas: Ajustar velocidade de visualização
-- Scroll do mouse: Zoom no mapa
-- Clique e arraste: Mover o mapa
-
-### 10.3 Modo Experimento
-
-Este modo é útil para comparar diferentes configurações de operadores genéticos:
-
-```bash
-python main.py --mode experiment
-```
-
-**O que acontece:**
-
-1. O sistema executa o algoritmo múltiplas vezes com diferentes combinações de operadores
-2. Para cada combinação (seleção × crossover × mutação), registra:
-   - Melhor fitness
-   - Tempo de execução
-   - Número de gerações até convergência
-3. Ao finalizar, gera:
-   - Tabela comparativa no terminal
-   - Gráficos de desempenho salvos como imagens
-   - Arquivo CSV com todos os resultados
-
-Este modo pode levar bastante tempo (horas) dependendo de quantas combinações você configurar para testar.
-
-### 10.4 Geração de Mapa
-
-Se você já executou o algoritmo e quer apenas gerar o mapa interativo:
-
-```bash
-python main.py --mode map
-```
-
-**O que acontece:**
-
-1. Executa uma otimização rápida
-2. Gera o arquivo `mapa_rotas_hospitais_sp.html`
-3. Você pode abrir este arquivo em qualquer navegador
-
-O mapa gerado é standalone - pode ser compartilhado e aberto em qualquer computador sem precisar do Python instalado.
-
-### 10.5 Executando a API REST
+### 10.1 Executando a API REST
 
 Para disponibilizar o sistema como serviço web:
 
@@ -970,7 +872,7 @@ curl http://localhost:8000/experiments
 curl -X DELETE http://localhost:8000/experiments/failed
 ```
 
-### 10.6 Executando a Interface Web
+### 10.2 Executando a Interface Web
 
 Para iniciar o dashboard web Streamlit:
 
@@ -1013,7 +915,7 @@ streamlit run src/web/app.py
 3. Uma janela Pygame será aberta automaticamente
 4. Acompanhe a execução em tempo real
 
-### 10.7 Workflow Recomendado
+### 10.3 Workflow Recomendado
 
 Para uma experiência completa e profissional, execute o sistema em modo completo:
 
@@ -1061,37 +963,7 @@ Deixe este terminal rodando também.
 - Em cada terminal, pressione `Ctrl+C`
 - Desative o ambiente virtual com `deactivate`
 
-### 10.8 Configuração Customizada
-
-Você pode criar arquivos de configuração JSON para reutilizar configurações específicas:
-
-**Crie um arquivo `minha_config.json`:**
-
-```json
-{
-  "population_size": 120,
-  "max_generations": 300,
-  "crossover_rate": 0.85,
-  "mutation_rate": 0.2,
-  "selection_method": "tournament",
-  "crossover_method": "partially_mapped_crossover",
-  "mutation_method": "2-opt",
-  "scenario": "large",
-  "num_vehicles": 4,
-  "vehicle_capacity": 120.0,
-  "w_distance": 1.0,
-  "w_priority": 15.0,
-  "w_capacity": 150.0
-}
-```
-
-**Execute com esta configuração:**
-
-```bash
-python main.py --mode visual --config minha_config.json
-```
-
-### 10.9 Cenários Disponíveis
+### 10.4 Cenários Disponíveis
 
 O sistema vem com quatro cenários pré-configurados:
 
@@ -1120,11 +992,6 @@ O sistema vem com quatro cenários pré-configurados:
 - Ideal para: Situações de emergência, priorização máxima
 
 **Especificando o cenário:**
-
-Via terminal:
-```bash
-python main.py --mode basic --scenario large
-```
 
 Via API:
 ```json

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from src.database.database import engine, Base, SessionLocal
+from src.database.database import SessionLocal
 from src.database.models import Experiment
 from src.genetic_algorithm.genetic_algorithm import GeneticAlgorithm, GAConfig, ReplacementStrategy
 from src.genetic_algorithm.selection import SelectionMethod
@@ -16,8 +16,6 @@ import threading
 from datetime import datetime
 import traceback
 
-# Cria tabelas se não existirem
-Base.metadata.create_all(bind=engine)
 
 def create_delivery_points_from_data(hospitals):
     points = []
@@ -179,10 +177,32 @@ class ExperimentManager:
         finally:
             db.close()
 
-    def list_experiments(self, limit=200):
+    def list_experiments(self, limit=200, include_details=False):
+        """
+        Lista experimentos. Por padrão não carrega result_details (pesado).
+
+        Args:
+            limit: Número máximo de experimentos
+            include_details: Se True, carrega result_details (JSONs grandes)
+        """
         db = self.get_db()
         try:
-            return db.query(Experiment).order_by(Experiment.created_at.desc()).limit(limit).all()
+            if include_details:
+                return db.query(Experiment).order_by(Experiment.created_at.desc()).limit(limit).all()
+            else:
+                # Carrega apenas colunas leves (sem result_details)
+                from sqlalchemy.orm import load_only
+                return db.query(Experiment).options(
+                    load_only(
+                        Experiment.id,
+                        Experiment.created_at,
+                        Experiment.status,
+                        Experiment.config,
+                        Experiment.best_fitness,
+                        Experiment.generations_run,
+                        Experiment.execution_time
+                    )
+                ).order_by(Experiment.created_at.desc()).limit(limit).all()
         finally:
             db.close()
 

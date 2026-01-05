@@ -21,34 +21,31 @@ This variant uses **Haversine distance calculations** for accurate geographic di
 pip install -r requirements.txt
 ```
 
-Dependencies: `numpy`, `matplotlib`, `pygame`, `folium`
+Dependencies: `numpy`, `matplotlib`, `pygame`, `folium`, `fastapi`, `uvicorn`, `streamlit`, `sqlalchemy`, `pydantic`
 
 ### Execution Modes
 
+**Option 1: Docker (recommended)**
 ```bash
-# Basic optimization (terminal output)
-python main.py --mode basic
+# With GPU NVIDIA
+docker-compose -f docker/docker-compose.yml up -d --build
 
-# Interactive Pygame visualization
-python main.py --mode visual
-
-# Experiment mode: compare GA operators
-python main.py --mode experiment
-
-# Generate only interactive HTML map
-python main.py --mode map
-
-# Quiet mode (suppress logs)
-python main.py --mode basic --quiet
+# CPU only
+docker-compose -f docker/docker-compose.cpu.yml up -d --build
 ```
 
-### Running Experiments
-
+**Option 2: Local Development**
 ```bash
-python experimento_selecao.py
+# Terminal 1 - API REST
+uvicorn src.api.main:app --reload --port 8000
+
+# Terminal 2 - Web Interface (also launches Pygame visualization)
+streamlit run src/web/app.py
 ```
 
-This compares the 8 selection methods and generates detailed visualizations and statistical analysis.
+**Services available:**
+- API FastAPI: http://localhost:8000 (docs: http://localhost:8000/docs)
+- Web Dashboard: http://localhost:8501
 
 ## Project Architecture
 
