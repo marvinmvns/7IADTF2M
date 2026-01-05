@@ -3,6 +3,8 @@
 **FIAP Tech Challenge - Fase 2**
 
 Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Implementa arquitetura MVC com API REST, interface web moderna, visualização em tempo real e testes automatizados. O projeto conta com aproximadamente 14.200 linhas de código distribuídas em 30 módulos Python, incluindo 24 operadores genéticos distintos.
+ 
+Atenção a conclusão e as otimizações e algortimos adotados estão em 13. [Conclusão](#13-conclusão)
 
 De forma objetiva, caso queira rodar com docker, em que esta tudo pronto(porém a interface do pygame não funcionará)
 docker-compose -f docker/docker-compose.cpu.yml up -d --build 
