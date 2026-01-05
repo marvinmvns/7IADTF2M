@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Resumo Executivo
+## 1. Resumo 
 
 O algoritmo genetico demonstrou eficacia na otimizacao de rotas de veiculos (VRP), com ganhos variando de **4% a 43%** dependendo do tipo de fitness e cenario utilizado.
 
