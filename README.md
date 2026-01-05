@@ -3,7 +3,8 @@
 **FIAP Tech Challenge - Fase 2**
 
 Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Implementa arquitetura MVC com API REST, interface web moderna, visualização em tempo real e testes automatizados. O projeto conta com aproximadamente 14.200 linhas de código distribuídas em 30 módulos Python, incluindo 24 operadores genéticos distintos.
----
+
+Atenção a conclusão e as otimizações e resultado encontram-se em 13. [Conclusão](#13-conclusão)
 
 ## 🚀 Instalação Rápida
 
@@ -111,7 +112,7 @@ instalacao/
 | Swagger Docs | http://localhost:8000/docs |
 | Ollama LLM | http://localhost:11434 |
 
-Atenção a conclusão e as otimizações e algortimos adotados estão em 13. [Conclusão](#13-conclusão)
+
 
 ---
 
