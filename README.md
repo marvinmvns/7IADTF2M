@@ -7,10 +7,75 @@ Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Impl
 De forma objetiva, caso queira rodar com docker, em que esta tudo pronto(porém a interface do pygame não funcionará)
 docker-compose -f docker/docker-compose.cpu.yml up -d --build 
 
-Para instalar, de acordo com o sistema operacional use: 
+Para instalar localmente, de acordo com o sistema operacional use:
 
-Para rodar localmente, com tudo ajustado
+### 🐧 Linux
+```bash
+# 1. Clone o repositório e entre no diretório
+git clone <url-do-repositorio>
+cd 7IADTF2M
 
+# 2. Execute o script de instalação
+chmod +x instalacao/linux/install.sh
+./instalacao/linux/install.sh
+
+# 3. Inicie os serviços
+./instalacao/linux/start_services.sh
+
+# 4. Para parar os serviços
+./instalacao/linux/stop_services.sh
+```
+
+### 🍎 macOS
+```bash
+# 1. Clone o repositório e entre no diretório
+git clone <url-do-repositorio>
+cd 7IADTF2M
+
+# 2. Execute o script de instalação
+chmod +x instalacao/macos/install.sh
+./instalacao/macos/install.sh
+
+# 3. Inicie os serviços
+./instalacao/macos/start_services.sh
+
+# 4. Para parar os serviços
+./instalacao/macos/stop_services.sh
+```
+
+### 🪟 Windows (PowerShell como Administrador)
+```powershell
+# 1. Clone o repositório e entre no diretório
+git clone <url-do-repositorio>
+cd 7IADTF2M
+
+# 2. Execute o script de instalação
+.\instalacao\windows\install.ps1
+
+# 3. Inicie os serviços
+.\instalacao\windows\start_services.bat
+
+# 4. Para parar os serviços
+.\instalacao\windows\stop_services.bat
+```
+
+### 📁 Estrutura dos Scripts
+
+```
+instalacao/
+├── linux/   → install.sh, uninstall.sh, start_services.sh, stop_services.sh
+├── macos/   → install.sh, uninstall.sh, start_services.sh, stop_services.sh
+└── windows/ → install.ps1, uninstall.ps1, start_services.bat, stop_services.bat
+```
+
+### 🌐 URLs dos Serviços (após instalação)
+
+| Serviço | URL |
+|---------|-----|
+| Dashboard Web | http://localhost:8501 |
+| API FastAPI | http://localhost:8000 |
+| Swagger Docs | http://localhost:8000/docs |
+| Ollama LLM | http://localhost:11434 |
 
 Atenção a conclusão e as otimizações e algortimos adotados estão em 13. [Conclusão](#13-conclusão)
 
