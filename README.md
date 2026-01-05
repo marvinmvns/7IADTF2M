@@ -3,9 +3,43 @@
 **FIAP Tech Challenge - Fase 2**
 
 Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Implementa arquitetura MVC com API REST, interface web moderna, visualização em tempo real e testes automatizados. O projeto conta com aproximadamente 14.200 linhas de código distribuídas em 30 módulos Python, incluindo 24 operadores genéticos distintos.
+---
 
-De forma objetiva, caso queira rodar com docker, em que esta tudo pronto(porém a interface do pygame não funcionará)
-docker-compose -f docker/docker-compose.cpu.yml up -d --build 
+## 🚀 Instalação Rápida
+
+### 🐳 Docker (Recomendado)
+```bash
+# 1. Clone o repositório
+git clone <url-do-repositorio>
+cd 7IADTF2M
+
+# 2. Inicie todos os serviços
+docker-compose -f docker/docker-compose.cpu.yml up -d --build
+
+# 3. Para parar os serviços
+docker-compose -f docker/docker-compose.cpu.yml down
+```
+> ⚠️ A interface Pygame não funciona via Docker
+
+### ⚙️ Execução Manual (com seu próprio Ollama)
+
+Se você já possui as dependências instaladas (`pip install -r requirements.txt`) e quer usar seu próprio Ollama:
+
+```bash
+# 1. Ative o ambiente virtual
+source venv/bin/activate  # Linux/macOS
+# ou: venv\Scripts\activate  # Windows
+
+# 2. Inicie a API (Terminal 1)
+uvicorn src.api.main:app --reload --port 8000
+
+# 3. Inicie o Dashboard (Terminal 2)
+streamlit run src/web/app.py
+```
+
+> 💡 **Configurar Ollama:** No Dashboard (http://localhost:8501), clique na ⚙️ engrenagem e aponte para seu Ollama (ex: `http://localhost:11434`)
+
+---
 
 Para instalar localmente, de acordo com o sistema operacional use:
 
