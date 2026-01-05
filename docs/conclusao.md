@@ -400,11 +400,6 @@ Fitness = Distancia_Total + Penalidade_Atual x (Excesso_Capacidade + Excesso_Aut
 3. **Inversion Mutation** - Mais consistente e eficaz
 4. **Cenario Medium** - Melhor equilibrio custo/beneficio
 
-### O que deve ser evitado:
-
-1. **Roulette Wheel Selection** - Muito instavel (media 12026)
-2. **Sequential Constructive Crossover** - Baixo ganho (15.42 km)
-3. **Gaussian Mutation** - Inadequado para rotas (media 19680)
 
 ### Recomendacoes por Caso de Uso:
 
@@ -415,23 +410,6 @@ Fitness = Distancia_Total + Penalidade_Atual x (Excesso_Capacidade + Excesso_Aut
 | Multiplos objetivos | weighted_multi | Boltzmann + Order-Based + Inversion | 18-43% |
 | Muitas restricoes | penalty_based | Rank + Order + Insert | 9-23% |
 
----
-
-## 10. Metricas Finais
-
-| Metrica | Valor |
-|---------|-------|
-| Experimentos Realizados | 396 |
-| Melhor Fitness Small | 128.71 |
-| Melhor Fitness Medium | 1054.84 |
-| Melhor Fitness Large | 1892.96 |
-| Maior Ganho Absoluto | 13992.24 pts (weighted_multi + large) |
-| Maior Eficiencia | 43.1% (weighted_multi + medium) |
-| Operador Mais Eficaz (Selecao) | Tournament |
-| Operador Mais Eficaz (Crossover) | Order Crossover |
-| Operador Mais Eficaz (Mutacao) | Inversion |
-
----
 
 ## 11. Tabela Resumo: O Que Cada Fitness Otimiza
 
@@ -498,10 +476,5 @@ Fitness = Distancia_Total + Penalidade_Atual x (Excesso_Capacidade + Excesso_Aut
 | Medium (40 hospitais) | R$ 63,53 | R$ 1.397,66 | R$ 16.771,92 |
 | **Large (80 hospitais)** | **R$ 340,21** | **R$ 7.484,62** | **R$ 89.815,44** |
 
-### ROI do Projeto:
-Considerando o custo de implementacao do sistema proximo a zero (codigo aberto), o retorno e imediato a partir do primeiro dia de operacao otimizada.
 
----
 
-*Documento gerado automaticamente a partir da analise de 396 experimentos.*
-*Premissas de calculo: Combustivel R$ 7,00/L | Consumo 10 km/L | Motorista R$ 25,00/h*
