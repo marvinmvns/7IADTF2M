@@ -246,22 +246,35 @@ if page == "Dashboard":
             
             # Aplica Filtro
             if selected_types:
-                filtered_df = experiments[experiments['fitness'].isin(selected_types)]
+                filtered_df = experiments[experiments['fitness'].isin(selected_types)].copy()
             else:
-                filtered_df = experiments
+                filtered_df = experiments.copy()
 
             # === MÉTRICAS (Usando dados filtrados) ===
             st.divider()
             
             if not filtered_df.empty:
-                best_fitness = filtered_df['best_fitness'].min()
+                # Filtrar apenas completados para métricas de eficiência
+                completed_df = filtered_df[filtered_df['status'] == 'completed']
+                
+                if not completed_df.empty:
+                    best_fitness = completed_df['best_fitness'].min()
+                    avg_gens = completed_df['generations_run'].mean()
+                else:
+                    best_fitness = 0.0
+                    avg_gens = 0
+                
+                # Total deve refletir o que está na tabela (completados + running + failed)
+                # SE o usuário quiser apenas sucesso, ele deve filtrar. 
+                # PORÉM, o user reclamou que o número estava errado (200).
+                # Vou exibir "Total (Sucesso)" para ser mais claro.
                 total_runs = len(filtered_df)
-                avg_gens = filtered_df['generations_run'].mean()
+                success_runs = len(completed_df)
                 
                 with col1:
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>Melhor Fitness (Filtrado)</h3>
+                        <h3>Melhor Fitness (Global)</h3>
                         <h1>{best_fitness:.2f}</h1>
                     </div>
                     """, unsafe_allow_html=True)
@@ -269,8 +282,8 @@ if page == "Dashboard":
                 with col2:
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>Total de Execuções</h3>
-                        <h1>{total_runs}</h1>
+                        <h3>Execuções (Sucesso / Total)</h3>
+                        <h1>{success_runs} <small>/{total_runs}</small></h1>
                     </div>
                     """, unsafe_allow_html=True)
                 
@@ -342,11 +355,13 @@ if page == "Dashboard":
             display_df = filtered_df[['id', 'status', 'created_at', 'fitness', 'fitness_inicial', 'best_fitness', 'ganho_pct', 'execution_time', 'generations_run']].copy()
             # Aplica conversão de fuso horário
             display_df['created_at'] = display_df['created_at'].apply(format_date_br)
-            display_df['ganho_pct'] = display_df['ganho_pct'].map('{:.1f}%'.format)
+            # Remove formatting from numerical columns to fix sorting
             display_df['fitness_inicial'] = display_df['fitness_inicial'].map('{:.2f}'.format)
             display_df['best_fitness'] = display_df['best_fitness'].map('{:.2f}'.format)
-            display_df['execution_time'] = display_df['execution_time'].map('{:.1f}s'.format)
-
+            
+            # Ordenação padrão pelo ganho (decrescente) se não houver ordenação na UI
+            # Mas o st.dataframe tem ordenação interativa, então apenas preparamos os dados
+            
             event = st.dataframe(
                 display_df,
                 use_container_width=True,
@@ -368,9 +383,15 @@ if page == "Dashboard":
                         """
                     ),
                     "best_fitness": "Melhor Fitness",
-                    "fitness_inicial": "Fitness Inicial",
-                    "ganho_pct": "Ganho (%)",
-                    "execution_time": "Tempo",
+                    "fitness_inicial": "Fit. Inicial",
+                    "ganho_pct": st.column_config.NumberColumn(
+                        "Ganho (%)",
+                        format="%.1f%%"
+                    ),
+                    "execution_time": st.column_config.NumberColumn(
+                        "Tempo (s)",
+                        format="%.1f s"
+                    ),
                     "generations_run": "Gerações"
                 },
                 on_select="rerun",
@@ -477,12 +498,26 @@ elif page == "Nova Execução":
 
             with c_scen:
                 # Encontrar index do cenário salvo
-                scenarios_opts = config_opts.get("scenarios", ["small", "medium", "large", "critical"])
+                # Mapeamento Reverso e Direto
+                scenario_map = {
+                    "small": "Pequeno", "medium": "Médio", "large": "Grande", "critical": "Crítico",
+                    "Pequeno": "small", "Médio": "medium", "Grande": "large", "Crítico": "critical"
+                }
+                
+                # Lista de opções em Português
+                scenarios_opts_pt = ["Pequeno", "Médio", "Grande", "Crítico"]
+                
+                defaults_scen_pt = scenario_map.get(defaults["scenario_name"], "Grande")
+                
                 try:
-                    scen_idx = scenarios_opts.index(defaults["scenario_name"])
+                    scen_idx = scenarios_opts_pt.index(defaults_scen_pt)
                 except:
-                    scen_idx = 2
-                scenario = st.selectbox("Cenário", scenarios_opts, index=scen_idx)
+                    scen_idx = 2 # Grande
+                    
+                scenario_pt = st.selectbox("Cenário", scenarios_opts_pt, index=scen_idx)
+                
+                # Converte de volta para inglês para usar na API/Logic
+                scenario = scenario_map.get(scenario_pt, "large")
             with c_nveh:
                 num_vehicles = st.number_input("Qtd. Veículos", 1, 20, defaults["num_vehicles"])
             with c_cap:
@@ -2033,16 +2068,23 @@ elif page == "Logistic LLM":
                 st.info("Nenhum experimento completado. Execute um primeiro.")
                 st.stop()
             
-            # Agrupa por fitness_type para estatísticas
+            # Agrupa por fitness_type E cenário para estatísticas
             from collections import defaultdict
+            # Key: (fitness_type, scenario_name)
             stats_by_fitness = defaultdict(lambda: {'count': 0, 'best_exp': None, 'sum_fitness': 0.0, 'times': []})
             
             for exp in completed:
-                ft = exp.get('config', {}).get('fitness_type', 'unknown')
+                cfg = exp.get('config', {})
+                ft = cfg.get('fitness_type', 'unknown')
+                scen = cfg.get('scenario_name') or cfg.get('scenario') or 'unknown'
+                
                 fit = exp.get('best_fitness', float('inf')) or float('inf') # Handle None
                 if fit == float('inf'): continue
+                
+                # Chave composta
+                key = (ft, scen)
 
-                stats = stats_by_fitness[ft]
+                stats = stats_by_fitness[key]
                 stats['count'] += 1
                 stats['sum_fitness'] += fit
                 stats['times'].append(exp.get('execution_time', 0) or 0)
@@ -2051,11 +2093,11 @@ elif page == "Logistic LLM":
                 if current_best is None or fit < (current_best.get('best_fitness') or float('inf')):
                     stats['best_exp'] = exp
             
-            st.subheader("📊 Melhores por Tipo de Fitness")
+            st.subheader("📊 Melhores por Tipo de Fitness e Cenário")
             
             # Tabela com melhores + estatísticas
             table_data = []
-            for ft, stats in stats_by_fitness.items():
+            for (ft, scen), stats in stats_by_fitness.items():
                 best_exp = stats['best_exp']
                 if best_exp:
                     avg_fit = stats['sum_fitness'] / stats['count']
@@ -2063,6 +2105,7 @@ elif page == "Logistic LLM":
                     
                     table_data.append({
                         "Abordagem": ft,
+                        "Cenário": scen,
                         "🏆 Melhor Fitness": f"{(best_exp.get('best_fitness') or 0):.2f}",
                         "📉 Média Fitness": f"{avg_fit:.2f}",
                         "🔢 Execuções": stats['count'],
@@ -2070,7 +2113,16 @@ elif page == "Logistic LLM":
                         "ID Melhor": best_exp.get('id')
                     })
             
-            st.dataframe(table_data, use_container_width=True, hide_index=True)
+            # Filtro por Abordagem (Adicionado por request)
+            if table_data:
+                all_approaches = sorted(list(set(d['Abordagem'] for d in table_data)))
+                selected_approaches = st.multiselect("Filtrar por Abordagem:", all_approaches, default=all_approaches, key="llm_grid_filter")
+                
+                filtered_table = [d for d in table_data if d['Abordagem'] in selected_approaches]
+            else:
+                filtered_table = []
+
+            st.dataframe(filtered_table, use_container_width=True, hide_index=True)
             
             with st.expander("🕒 Histórico Recente (Todas as Execuções)", expanded=False):
                 history_data = []
@@ -2089,10 +2141,14 @@ elif page == "Logistic LLM":
             
             # Seleção do experimento base com label rica
             exp_options = {}
-            for ft, stats in stats_by_fitness.items():
+            for (ft, scen), stats in stats_by_fitness.items():
                 if stats['best_exp']:
                     best = stats['best_exp']
-                    label = f"{ft} (🏆 Melhor: {(best.get('best_fitness') or 0):.2f} | 🔢 N={stats['count']})"
+                    # Label formatada conforme solicitado
+                    # Ex: distance_only (🏆 Melhor: 128.71 | 🔢 N=132 | Tipo de Fitness = Critical)
+                    # Nota: O usuário pediu "Tipo de Fitness = Critical" mas Critical é Cenário. 
+                    # Usarei "Cenário" para clareza, mas mantendo a estrutura.
+                    label = f"{ft} (🏆 Melhor: {(best.get('best_fitness') or 0):.2f} | 🔢 N={stats['count']} | Cenário: {scen})"
                     exp_options[label] = best
 
             selected_label = st.selectbox("📍 Selecione a Abordagem Base para Otimizar", options=list(exp_options.keys()))

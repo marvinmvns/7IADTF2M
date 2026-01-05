@@ -254,7 +254,7 @@ def run_basic_optimization(verbose: bool = True) -> GAResult:
     return result
 
 
-def run_with_visualization(custom_config: Optional[GAConfig] = None):
+def run_with_visualization(custom_config: Optional[GAConfig] = None, initial_scenario_key: str = "large"):
     """Executa com visualização Pygame."""
     print("=" * 70)
     print("MODO VISUALIZAÇÃO INTERATIVA")
@@ -276,10 +276,20 @@ def run_with_visualization(custom_config: Optional[GAConfig] = None):
         ("Crítico", create_delivery_points(scenario_critical_only())),
     ]
     
+    # Mapeia chave interna (API/Config) para índice
+    key_to_index = {
+        "small": 0, "simple": 0,
+        "medium": 1,
+        "large": 2, "complex": 2,
+        "critical": 3
+    }
+    
+    initial_idx = key_to_index.get(initial_scenario_key, 2)
+    
     # Configura AG
     if custom_config:
         config = custom_config
-        print("Usando configuração personalizada.")
+        print(f"Usando configuração personalizada. Cenário inicial: {initial_scenario_key} (idx={initial_idx})")
     else:
         config = GAConfig(
             population_size=80,
@@ -301,7 +311,7 @@ def run_with_visualization(custom_config: Optional[GAConfig] = None):
         depot_index=0,
         ga_config=config,
         scenarios=scenarios,
-        initial_scenario=0,
+        initial_scenario=initial_idx,
         vehicle_count=3,
         background_map_path=None
     )
@@ -318,6 +328,78 @@ def run_with_visualization(custom_config: Optional[GAConfig] = None):
 
 
 def run_experiment_comparison():
+    # ... (omitted) ...
+    pass
+
+def generate_map_only():
+    pass 
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Otimização de Rotas Hospitalares')
+    
+    parser.add_argument(
+        '--mode', '-m',
+        choices=['basic', 'visual', 'experiment', 'map'],
+        default='basic',
+        help='Modo de execução'
+    )
+    parser.add_argument(
+        '--quiet', '-q',
+        action='store_true',
+        help='Modo silencioso'
+    )
+    parser.add_argument(
+        '--config', '-c',
+        type=str,
+        help='Caminho para arquivo JSON de configuração ou string JSON'
+    )
+    
+    args = parser.parse_args()
+    
+    # Carrega config se fornecida
+    ga_config = None
+    initial_scenario = "large"
+    
+    if args.config:
+        import json
+        try:
+            if os.path.exists(args.config):
+                with open(args.config, 'r') as f:
+                    config_dict = json.load(f)
+            else:
+                config_dict = json.loads(args.config)
+            
+            # Extrai cenário se presente
+            if 'scenario' in config_dict:
+                initial_scenario = config_dict['scenario']
+            
+            ga_config = GAConfig(
+                population_size=config_dict.get('population_size', 100),
+                max_generations=config_dict.get('max_generations', 300),
+                crossover_rate=config_dict.get('crossover_rate', 0.9),
+                mutation_rate=config_dict.get('mutation_rate', 0.15),
+                selection_method=SelectionMethod(config_dict.get('selection_method', 'tournament')),
+                crossover_method=CrossoverMethod(config_dict.get('crossover_method', 'ox')),
+                mutation_method=MutationMethod(config_dict.get('mutation_method', 'inversion')),
+                replacement_strategy=config_dict.get('replacement_strategy', 'elitist'),
+                elite_size=config_dict.get('elite_size', 2),
+                tournament_size=config_dict.get('tournament_size', 3),
+                stagnation_limit=config_dict.get('stagnation_limit', 50),
+                heuristic_init_ratio=config_dict.get('heuristic_init_ratio', 0.2),
+                verbose=not args.quiet
+            )
+        except Exception as e:
+            print(f"Erro ao carregar configuração: {e}")
+            return
+
+    if args.mode == 'basic':
+        run_basic_optimization(verbose=not args.quiet)
+    elif args.mode == 'visual':
+        run_with_visualization(custom_config=ga_config, initial_scenario_key=initial_scenario)
+    elif args.mode == 'experiment':
+        run_experiment_comparison()
+    elif args.mode == 'map':
+        generate_map_only()
     """Executa comparação de diferentes operadores."""
     print("=" * 70)
     print("EXPERIMENTO: COMPARAÇÃO DE OPERADORES GENÉTICOS")

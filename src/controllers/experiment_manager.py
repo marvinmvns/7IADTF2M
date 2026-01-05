@@ -246,14 +246,29 @@ class ExperimentManager:
             db.close()
 
     def delete_failed_experiments(self):
-        """Remove experimentos falhados ou incompletos."""
+        """
+        Remove experimentos falhados ou estagnados (running/pending antigos).
+        Critério 'stale': status='running'/'pending' e created_at > 30 minutos atrás.
+        """
         db = self.get_db()
         try:
-            # Apaga failed ou pending/running antigos se necessário (aqui focamos em 'failed')
-            db.query(Experiment).filter(Experiment.status == "failed").delete()
+            # 1. Remove Failed
+            deleted_failed = db.query(Experiment).filter(Experiment.status == "failed").delete()
+            
+            # 2. Remove Stale (Running/Pending > 30min)
+            import datetime
+            cutoff_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
+            
+            deleted_stale = db.query(Experiment).filter(
+                Experiment.status.in_(["running", "pending"]),
+                Experiment.created_at < cutoff_time
+            ).delete()
+            
             db.commit()
+            print(f"[CLEANUP] Falhados removidos: {deleted_failed} | Estagnados removidos: {deleted_stale}")
             return True
-        except Exception:
+        except Exception as e:
+            print(f"[CLEANUP ERROR] {e}")
             db.rollback()
             return False
         finally:

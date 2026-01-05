@@ -11,15 +11,17 @@ Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Impl
 1. [Introdução](#1-introdução)
 2. [O Problema de Roteamento de Veículos](#2-o-problema-de-roteamento-de-veículos)
 3. [Algoritmos Genéticos](#3-algoritmos-genéticos)
-4. [Operadores Genéticos Implementados](#4-operadores-genéticos-implementados)
-5. [Estrutura do Código](#5-estrutura-do-código)
-6. [Arquitetura do Sistema](#6-arquitetura-do-sistema)
-7. [Interfaces e Visualizações](#7-interfaces-e-visualizações)
-8. [Instalação e Configuração](#8-instalação-e-configuração)
-9. [Guia Completo de Execução](#9-guia-completo-de-execução)
-10. [Testes Automatizados](#10-testes-automatizados)
-11. [Conclusão](#11-conclusão)
-12. [Referências](#12-referências)
+4. [Tipos de Função de Fitness](#4-tipos-de-função-de-fitness)
+5. [Operadores Genéticos Implementados](#5-operadores-genéticos-implementados)
+6. [Estrutura do Código](#6-estrutura-do-código)
+7. [Arquitetura do Sistema](#7-arquitetura-do-sistema)
+8. [Interfaces e Visualizações](#8-interfaces-e-visualizações)
+9. [Instalação e Configuração](#9-instalação-e-configuração)
+10. [Guia Completo de Execução](#10-guia-completo-de-execução)
+11. [Testes Automatizados](#11-testes-automatizados)
+12. [Resultados dos Experimentos](#12-resultados-dos-experimentos)
+13. [Conclusão](#13-conclusão)
+14. [Referências](#14-referências)
 
 ---
 
@@ -99,11 +101,109 @@ Fitness = w1 × Distância_Total + w2 × Penalidade_Prioridade +
 
 Os pesos (w1, w2, w3, w4) são configuráveis e permitem ajustar a importância relativa de cada objetivo.
 
-## 4. Operadores Genéticos Implementados
+## 4. Tipos de Função de Fitness
+
+O sistema implementa quatro estratégias distintas de avaliação de fitness, cada uma adequada a diferentes cenários operacionais. A escolha do tipo de fitness impacta diretamente os resultados da otimização.
+
+### 4.1 Distance Only (Apenas Distância)
+
+A estratégia mais simples, focada exclusivamente na minimização da quilometragem total percorrida pela frota.
+
+**Fórmula:**
+```
+Fitness = Σ (Distância de cada rota)
+```
+
+**Características:**
+- Otimiza exclusivamente o custo de transporte
+- Não considera prioridades de entrega
+- Ideal para logística simples sem restrições de urgência
+- Eficiência típica: 4-12%
+
+### 4.2 Priority Aware (Consciente de Prioridade)
+
+Além da distância, penaliza soluções que atrasam entregas urgentes ou críticas.
+
+**Fórmula:**
+```
+Fitness = Distância_Total + (Tempo_Crítico × 1.0) + (Tempo_Urgente × 0.5) + (Tempo_Regular × 0.1)
+```
+
+**Níveis de Prioridade:**
+| Nível | Tipo | Peso | Aplicação |
+|-------|------|------|-----------|
+| 1 | Crítico | 100 | Insulina, sangue, medicamentos de emergência |
+| 2 | Urgente | 50 | Antibióticos, medicamentos de curto prazo |
+| 3 | Regular | 10 | Suprimentos de rotina |
+
+**Características:**
+- Garante que hospitais críticos sejam atendidos primeiro
+- Balanceia eficiência com urgência
+- Ideal para operações hospitalares
+- Eficiência típica: 4-11%
+
+### 4.3 Weighted Multi-Objective (Multi-Objetivo Ponderado)
+
+A estratégia mais completa, considerando seis fatores simultaneamente com pesos configuráveis.
+
+**Componentes:**
+| Componente | Peso | O que mede |
+|------------|------|------------|
+| Tempo | 1.0 | Tempo total de viagem |
+| Custo Operacional | 0.5 | Consumo de combustível |
+| Prioridade | 10.0 | Penalidade por atrasar entregas críticas |
+| Capacidade | 100.0 | Penalidade por exceder carga máxima |
+| Autonomia | 100.0 | Penalidade por exceder km máximo |
+| Janela de Tempo | 50.0 | Penalidade por chegar fora do horário |
+
+**Fórmula:**
+```
+Fitness = (Tempo × 1.0) + (Custo × 0.5) + (Penalidade_Prioridade × 10.0) +
+          (Violação_Capacidade × 100.0) + (Violação_Autonomia × 100.0) +
+          (Violação_Janela × 50.0)
+```
+
+**Características:**
+- Abordagem mais abrangente
+- Garante soluções operacionalmente viáveis
+- Maior potencial de otimização (até 43%)
+- Ideal para operações complexas com múltiplas restrições
+- Eficiência típica: 18-43%
+
+### 4.4 Penalty Based (Baseado em Penalidades Adaptativas)
+
+Utiliza penalidades que aumentam exponencialmente ao longo das gerações, permitindo exploração inicial e convergência para soluções viáveis.
+
+**Mecanismo:**
+```
+Penalidade_Atual = Penalidade_Base × (1.1 ^ Geração)
+
+Geração 0:   Penalidade = 100 × 1.1^0 = 100
+Geração 50:  Penalidade = 100 × 1.1^50 = 11.739
+Geração 100: Penalidade = 100 × 1.1^100 = 1.378.061
+```
+
+**Características:**
+- Permite explorar soluções "inviáveis" no início
+- Força convergência para viabilidade
+- Garante rotas 100% executáveis
+- Ideal quando restrições devem ser rigorosamente respeitadas
+- Eficiência típica: 9-23%
+
+### 4.5 Comparativo de Eficiência
+
+| Tipo de Fitness | Eficiência Média | Melhor Caso | Recomendação |
+|-----------------|------------------|-------------|--------------|
+| Weighted Multi-Objective | 28.4% | 43.1% | Múltiplos objetivos |
+| Penalty Based | 16.2% | 22.9% | Muitas restrições |
+| Priority Aware | 7.3% | 11.1% | Entregas urgentes |
+| Distance Only | 7.1% | 12.0% | Simplicidade |
+
+## 5. Operadores Genéticos Implementados
 
 Uma das principais contribuições deste projeto é a implementação completa de múltiplas variantes de operadores genéticos, permitindo análise comparativa de desempenho. Foram implementados 24 operadores distintos.
 
-### 4.1 Operadores de Seleção
+### 5.1 Operadores de Seleção
 
 A seleção determina quais indivíduos se reproduzirão. Foram implementados 8 métodos:
 
@@ -123,7 +223,7 @@ A seleção determina quais indivíduos se reproduzirão. Foram implementados 8 
 
 **Seleção de Estado Estacionário (Steady State):** Apenas uma pequena fração da população é substituída a cada geração. Preserva mais a população existente entre gerações.
 
-### 4.2 Operadores de Crossover
+### 5.2 Operadores de Crossover
 
 O crossover combina material genético de dois pais. Para problemas de permutação como o VRP, operadores especiais são necessários para manter a validade das soluções (sem duplicatas ou omissões). Foram implementados 8 operadores:
 
@@ -143,7 +243,7 @@ O crossover combina material genético de dois pais. Para problemas de permutaç
 
 **Position-Based Crossover (POS):** Preserva as posições dos genes selecionados de um pai e preenche o resto com genes do outro pai.
 
-### 4.3 Operadores de Mutação
+### 5.3 Operadores de Mutação
 
 A mutação introduz variabilidade genética e ajuda a explorar novas regiões do espaço de busca. Foram implementados 8 operadores:
 
@@ -163,7 +263,7 @@ A mutação introduz variabilidade genética e ajuda a explorar novas regiões d
 
 **Reverse Sequence Mutation (RSM):** Variante da inversão com seleção de segmento baseada em tamanho aleatório.
 
-## 5. Estrutura do Código
+## 6. Estrutura do Código
 
 O projeto foi organizado seguindo princípios de modularização e separação de responsabilidades, facilitando manutenção, testes e extensibilidade.
 
@@ -226,11 +326,11 @@ projeto2_haversine/
 - Suites de teste: 8 arquivos
 - Tamanho total: 2,1 MB
 
-## 6. Arquitetura do Sistema
+## 7. Arquitetura do Sistema
 
 O sistema implementa uma arquitetura em três camadas seguindo o padrão MVC (Model-View-Controller), com persistência de dados, API REST e interfaces modernas.
 
-### 6.1 Camada de Modelo (Model)
+### 7.1 Camada de Modelo (Model)
 
 **Banco de Dados:** SQLite com SQLAlchemy ORM gerencia a persistência de experimentos.
 
@@ -243,7 +343,7 @@ O modelo Experiment armazena:
 
 **Arquivos de Dados:** O módulo `hospitais_sp.py` contém dados reais de 25+ hospitais do estado de São Paulo, incluindo coordenadas GPS, demanda de medicamentos e nível de prioridade.
 
-### 6.2 Camada de Controle (Controller)
+### 7.2 Camada de Controle (Controller)
 
 O componente `ExperimentManager` orquestra toda a lógica de negócio:
 
@@ -255,7 +355,7 @@ O componente `ExperimentManager` orquestra toda a lógica de negócio:
 
 **Persistência de Resultados:** Atualiza o banco de dados com os resultados assim que a execução termina, incluindo tratamento robusto de erros.
 
-### 6.3 Camada de Visão (View)
+### 7.3 Camada de Visão (View)
 
 O sistema oferece três interfaces distintas:
 
@@ -265,7 +365,7 @@ O sistema oferece três interfaces distintas:
 
 **Visualização em Tempo Real (Pygame):** Interface visual que mostra a evolução do algoritmo enquanto ele executa.
 
-### 6.4 API REST
+### 7.4 API REST
 
 Implementada com FastAPI, a API oferece 10 endpoints para controle completo do sistema:
 
@@ -291,7 +391,7 @@ Implementada com FastAPI, a API oferece 10 endpoints para controle completo do s
 
 A API usa validação automática com Pydantic, garantindo que todos os parâmetros estejam dentro de faixas válidas. As execuções ocorrem em background através do sistema de BackgroundTasks do FastAPI, permitindo que a API responda imediatamente sem esperar a conclusão do experimento.
 
-### 6.5 Documentação OpenAPI/Swagger
+### 7.5 Documentação OpenAPI/Swagger
 
 O projeto inclui documentação completa da API em formato OpenAPI 3.0, disponível tanto de forma dinâmica quanto estática.
 
@@ -347,11 +447,11 @@ O arquivo `openapi.json` pode ser importado em ferramentas como:
 - **Swagger Codegen:** Gerar clientes em várias linguagens
 - **API Testing Tools:** Ferramentas de teste automatizado de APIs
 
-## 7. Interfaces e Visualizações
+## 8. Interfaces e Visualizações
 
 O sistema oferece três formas distintas de interação, cada uma adequada a um propósito específico.
 
-### 7.1 Interface Web (Streamlit)
+### 8.1 Interface Web (Streamlit)
 
 A interface web fornece controle completo do sistema através do navegador. Ela está dividida em várias páginas:
 
@@ -408,7 +508,7 @@ Permite criar cenários customizados, adicionando ou removendo hospitais, ajusta
 
 Permite ajustar configurações globais do sistema, como tema visual, timeout de requisições à API, e preferências de visualização.
 
-### 7.2 Visualização em Tempo Real (Pygame)
+### 8.2 Visualização em Tempo Real (Pygame)
 
 A interface Pygame oferece uma visão completa da execução do algoritmo enquanto ele roda. A tela é dividida em três áreas principais:
 
@@ -457,7 +557,7 @@ Na parte inferior da tela há botões de controle:
 
 Você pode pausar a qualquer momento para examinar uma geração específica, aproximar o zoom no mapa para ver detalhes das rotas, ou ajustar parâmetros em tempo real.
 
-### 7.3 Mapas Interativos (Folium)
+### 8.3 Mapas Interativos (Folium)
 
 Após a execução do algoritmo, o sistema gera um arquivo HTML com um mapa interativo baseado em mapas reais do OpenStreetMap. Este mapa pode ser aberto em qualquer navegador.
 
@@ -479,11 +579,11 @@ O mapa mostra:
 
 Este mapa é especialmente útil para apresentações e para verificar a viabilidade prática das rotas geradas, já que você pode comparar com o conhecimento local do tráfego e infraestrutura de São Paulo.
 
-## 8. Instalação e Configuração
+## 9. Instalação e Configuração
 
 Este guia detalha todos os passos necessários para instalar e configurar o sistema em sua máquina.
 
-### 8.1 Requisitos de Sistema
+### 9.1 Requisitos de Sistema
 
 **Sistema Operacional:** O projeto funciona em Linux, macOS e Windows. Os exemplos de comandos a seguir assumem Linux/macOS, mas equivalentes Windows são fornecidos quando necessário.
 
@@ -503,7 +603,7 @@ python3 --version
 
 **Memória RAM:** Mínimo de 4 GB, recomendado 8 GB para executar experimentos maiores.
 
-### 8.2 Obtenção do Código
+### 9.2 Obtenção do Código
 
 Se o projeto está em um repositório Git:
 
@@ -526,7 +626,7 @@ tar -xzf projeto2_haversine.tar.gz
 cd projeto2_haversine
 ```
 
-### 8.3 Ambiente Virtual
+### 9.3 Ambiente Virtual
 
 Criar um ambiente virtual é altamente recomendado para isolar as dependências do projeto. Isso evita conflitos com outros projetos Python em seu sistema.
 
@@ -552,7 +652,7 @@ Para desativar o ambiente virtual quando terminar de trabalhar:
 deactivate
 ```
 
-### 8.4 Instalação de Dependências
+### 9.4 Instalação de Dependências
 
 Com o ambiente virtual ativado, instale todas as dependências do projeto:
 
@@ -577,7 +677,7 @@ Este comando instalará:
 
 A instalação pode levar alguns minutos dependendo da sua conexão com a internet.
 
-### 8.5 Verificação da Instalação
+### 9.5 Verificação da Instalação
 
 Para verificar se tudo foi instalado corretamente:
 
@@ -587,7 +687,7 @@ python -c "import numpy, matplotlib, pygame, folium, fastapi, streamlit; print('
 
 Se este comando executar sem erros, a instalação foi bem-sucedida.
 
-### 8.6 Estrutura de Diretórios
+### 9.6 Estrutura de Diretórios
 
 Após a instalação, verifique se a estrutura de diretórios está completa:
 
@@ -597,7 +697,7 @@ ls -la
 
 Você deve ver os diretórios: `src/`, `data/`, `tests/`, `assets/` e os arquivos `main.py`, `requirements.txt`, `README.md`, entre outros.
 
-### 8.7 Execução com Docker
+### 9.7 Execução com Docker
 
 O projeto inclui configuração completa para execução em containers Docker, incluindo servidor Ollama com modelo Gemma3 para inferência local de LLM.
 
@@ -688,11 +788,11 @@ docker push seu-usuario/ga-vrp-app:2.0.0
 - Banco SQLite é compartilhado entre API e Web
 - Para mais detalhes, consulte `docker/README.md`
 
-## 9. Guia Completo de Execução
+## 10. Guia Completo de Execução
 
 Esta seção detalha todos os modos de execução disponíveis, com exemplos práticos e explicações de cada parâmetro.
 
-### 9.1 Execução Básica via Terminal
+### 10.1 Execução Básica via Terminal
 
 O modo mais simples de executar o sistema é através do script principal `main.py`. Este modo executa a otimização e exibe os resultados diretamente no terminal.
 
@@ -726,7 +826,7 @@ python main.py --mode basic --quiet
 
 Neste modo, apenas o resultado final é exibido.
 
-### 9.2 Visualização em Tempo Real
+### 10.2 Visualização em Tempo Real
 
 Para acompanhar visualmente a evolução do algoritmo:
 
@@ -752,7 +852,7 @@ python main.py --mode visual
 - Scroll do mouse: Zoom no mapa
 - Clique e arraste: Mover o mapa
 
-### 9.3 Modo Experimento
+### 10.3 Modo Experimento
 
 Este modo é útil para comparar diferentes configurações de operadores genéticos:
 
@@ -774,7 +874,7 @@ python main.py --mode experiment
 
 Este modo pode levar bastante tempo (horas) dependendo de quantas combinações você configurar para testar.
 
-### 9.4 Geração de Mapa
+### 10.4 Geração de Mapa
 
 Se você já executou o algoritmo e quer apenas gerar o mapa interativo:
 
@@ -790,7 +890,7 @@ python main.py --mode map
 
 O mapa gerado é standalone - pode ser compartilhado e aberto em qualquer computador sem precisar do Python instalado.
 
-### 9.5 Executando a API REST
+### 10.5 Executando a API REST
 
 Para disponibilizar o sistema como serviço web:
 
@@ -868,7 +968,7 @@ curl http://localhost:8000/experiments
 curl -X DELETE http://localhost:8000/experiments/failed
 ```
 
-### 9.6 Executando a Interface Web
+### 10.6 Executando a Interface Web
 
 Para iniciar o dashboard web Streamlit:
 
@@ -911,7 +1011,7 @@ streamlit run src/web/app.py
 3. Uma janela Pygame será aberta automaticamente
 4. Acompanhe a execução em tempo real
 
-### 9.7 Workflow Recomendado
+### 10.7 Workflow Recomendado
 
 Para uma experiência completa e profissional, execute o sistema em modo completo:
 
@@ -959,7 +1059,7 @@ Deixe este terminal rodando também.
 - Em cada terminal, pressione `Ctrl+C`
 - Desative o ambiente virtual com `deactivate`
 
-### 9.8 Configuração Customizada
+### 10.8 Configuração Customizada
 
 Você pode criar arquivos de configuração JSON para reutilizar configurações específicas:
 
@@ -989,7 +1089,7 @@ Você pode criar arquivos de configuração JSON para reutilizar configurações
 python main.py --mode visual --config minha_config.json
 ```
 
-### 9.9 Cenários Disponíveis
+### 10.9 Cenários Disponíveis
 
 O sistema vem com quatro cenários pré-configurados:
 
@@ -1033,11 +1133,11 @@ Via API:
 
 Via interface web: Selecione no dropdown "Configuração de Cenário"
 
-## 10. Testes Automatizados
+## 11. Testes Automatizados
 
 O projeto inclui uma suite completa de testes para garantir qualidade e confiabilidade.
 
-### 10.1 Organização dos Testes
+### 11.1 Organização dos Testes
 
 Os testes estão organizados em 8 arquivos, cada um focando em uma área específica:
 
@@ -1090,7 +1190,7 @@ Os testes estão organizados em 8 arquivos, cada um focando em uma área especí
 - Integridade de dados
 - Transações
 
-### 10.2 Executando os Testes
+### 11.2 Executando os Testes
 
 **Todos os testes:**
 
@@ -1168,7 +1268,7 @@ Execute:
 ptw tests/
 ```
 
-### 10.3 Interpretando Resultados
+### 11.3 Interpretando Resultados
 
 **PASSED:** Teste executado com sucesso, comportamento esperado confirmado.
 
@@ -1189,7 +1289,7 @@ FAILED tests/test_ga_operators.py::test_pmx_crossover - AssertionError: assert [
 
 Isso indica que o teste esperava `[1, 3, 2]` mas obteve `[1, 2, 3]`.
 
-### 10.4 Escrevendo Novos Testes
+### 11.4 Escrevendo Novos Testes
 
 Se você modificar o código, adicione testes correspondentes. Exemplo básico:
 
@@ -1211,15 +1311,73 @@ Execute o novo teste:
 pytest tests/test_novo_modulo.py::test_nova_funcionalidade -v
 ```
 
-## 11. Conclusão
+## 12. Resultados dos Experimentos
+
+Esta seção apresenta um resumo dos resultados obtidos através de 396 experimentos executados com diferentes configurações de operadores genéticos e tipos de fitness.
+
+> **Análise completa disponível em:** [`docs/conclusao.md`](docs/conclusao.md)
+
+### 12.1 Resumo Executivo
+
+| Métrica | Valor |
+|---------|-------|
+| Total de Experimentos | 396 |
+| Melhor Eficiência | 43.1% (weighted_multi + medium) |
+| Pior Eficiência | 4.0% (priority_aware + medium) |
+| Eficiência Média Geral | 14.7% |
+
+### 12.2 Eficiência por Tipo de Fitness
+
+| Tipo de Fitness | Eficiência Média | Melhor Caso | Recomendação |
+|-----------------|------------------|-------------|--------------|
+| Weighted Multi-Objective | 28.4% | 43.1% | Múltiplos objetivos |
+| Penalty Based | 16.2% | 22.9% | Muitas restrições |
+| Priority Aware | 7.3% | 11.1% | Entregas urgentes |
+| Distance Only | 7.1% | 12.0% | Simplicidade |
+
+### 12.3 Melhores Operadores por Tipo de Fitness
+
+| Fitness Type | Seleção | Crossover | Mutação |
+|--------------|---------|-----------|---------|
+| distance_only | Tournament | Order Crossover | 2-opt |
+| priority_aware | Boltzmann | Order-Based | Inversion |
+| weighted_multi | Boltzmann | Order-Based | Inversion |
+| penalty_based | Rank | Order Crossover | Insert |
+
+### 12.4 Economia Estimada (Cenário Large - 80 hospitais)
+
+Considerando as premissas de combustível a R$ 7,00/litro, consumo de 10 km/litro e custo de motorista a R$ 25,00/hora:
+
+| Componente | Economia/Dia | Economia/Mês | Economia/Ano |
+|------------|--------------|--------------|--------------|
+| Combustível | R$ 179,71 | R$ 3.953,62 | R$ 47.443,44 |
+| Mão-de-obra | R$ 160,50 | R$ 3.531,00 | R$ 42.372,00 |
+| **TOTAL** | **R$ 340,21** | **R$ 7.484,62** | **R$ 89.815,44** |
+
+### 12.5 Recomendações por Caso de Uso
+
+| Caso de Uso | Fitness Type | Configuração | Eficiência Esperada |
+|-------------|--------------|--------------|---------------------|
+| Logística simples | distance_only | Tournament + Order + 2-opt | 4-12% |
+| Hospital/Urgência | priority_aware | Boltzmann + Order-Based + Inversion | 4-11% |
+| Múltiplos objetivos | weighted_multi | Boltzmann + Order-Based + Inversion | 18-43% |
+| Muitas restrições | penalty_based | Rank + Order + Insert | 9-23% |
+
+Para análise detalhada incluindo interpretação dos ganhos em termos de tempo, dinheiro, segurança e qualidade de serviço, consulte o documento [`docs/conclusao.md`](docs/conclusao.md).
+
+## 13. Conclusão
 
 Este projeto demonstra a aplicação de Algoritmos Genéticos em um problema real de otimização logística, com complexidade comparável a desafios encontrados em operações empresariais. A solução vai além de uma implementação acadêmica básica, oferecendo uma arquitetura profissional completa com API REST, persistência de dados, interface web moderna e testes automatizados.
+
+Os experimentos realizados (396 execuções com diferentes configurações) demonstraram ganhos de eficiência entre **4% e 43%**, com potencial de economia anual superior a **R$ 89.000** em operações de grande porte. A análise completa está documentada em [`docs/conclusao.md`](docs/conclusao.md).
 
 **Principais Realizações:**
 
 **Arquitetura de Produção:** O sistema implementa separação clara de responsabilidades através do padrão MVC, com camadas de modelo, visão e controle bem definidas. A API REST permite integração com outros sistemas, enquanto a interface web oferece usabilidade para usuários não técnicos.
 
 **Implementação Completa de Operadores:** Os 24 operadores genéticos implementados (8 de seleção, 8 de crossover e 8 de mutação) fornecem uma base sólida para análise comparativa e pesquisa. Cada operador foi implementado seguindo a literatura acadêmica correspondente, com validações que garantem a integridade das permutações.
+
+**Quatro Estratégias de Fitness:** O sistema oferece quatro tipos distintos de função de fitness (Distance Only, Priority Aware, Weighted Multi-Objective e Penalty Based), permitindo adaptar a otimização a diferentes cenários operacionais. A estratégia multi-objetivo demonstrou os maiores ganhos (até 43%), enquanto a estratégia baseada em penalidades garante 100% de viabilidade das rotas.
 
 **Visualizações Profissionais:** As três formas de visualização atendem diferentes necessidades - mapas interativos HTML para apresentações e análise geográfica, interface Pygame para acompanhamento da evolução em tempo real, e dashboard web Streamlit para gestão executiva e análise de resultados.
 
@@ -1247,7 +1405,7 @@ O código está estruturado para extensão futura. Novos operadores genéticos p
 
 Com mais de 14.000 linhas de código implementadas e testadas, o projeto representa um trabalho significativo que combina teoria de algoritmos evolutivos, engenharia de software e aplicação prática em logística de saúde.
 
-## 12. Referências
+## 14. Referências
 
 [1] Toth, P., & Vigo, D. (Eds.). (2014). Vehicle routing: problems, methods, and applications. Society for Industrial and Applied Mathematics.
 
