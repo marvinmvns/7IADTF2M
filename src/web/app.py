@@ -1375,7 +1375,14 @@ elif page == "Gerador Logístico":
                         st.divider()
 
                         # --- COMPARAÇÃO DE EFICIÊNCIA ---
+                        # Usa session_state para manter o estado do painel aberto
+                        if 'show_efficiency_comparison' not in st.session_state:
+                            st.session_state.show_efficiency_comparison = False
+                        
                         if st.button("📊 Comparar Eficiência (Baseline vs Otimizado)", type="secondary", use_container_width=True):
+                            st.session_state.show_efficiency_comparison = not st.session_state.show_efficiency_comparison
+                        
+                        if st.session_state.show_efficiency_comparison:
                             st.markdown("### 📉 Relatório de Eficiência por Algoritmo")
                             
                             try:
