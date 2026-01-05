@@ -217,7 +217,9 @@ if page == "Dashboard":
     col1, col2, col3 = st.columns(3)
     
     try:
-        experiments = pd.DataFrame(requests.get(f"{API_URL}/experiments").json())
+        exp_response = requests.get(f"{API_URL}/experiments", timeout=5)
+        exp_response.raise_for_status()
+        experiments = pd.DataFrame(exp_response.json())
         
         if not experiments.empty:
             # === PREPARAÇÃO DE DADOS (Moved Up) ===
@@ -416,9 +418,11 @@ if page == "Dashboard":
         else:
             st.info("Nenhuma execução registrada. Inicie um novo experimento.")
             
-    except requests.exceptions.ConnectionError:
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         st.error("⚠️ Não foi possível conectar à API. Certifique-se de que o backend está rodando.")
         st.code("uvicorn src.api.main:app --reload")
+    except (requests.exceptions.JSONDecodeError, requests.exceptions.HTTPError) as e:
+        st.error(f"⚠️ API retornou resposta inválida. Aguarde a inicialização ou verifique o backend: {e}")
 
 elif page == "Nova Execução":
     st.title("🚀 Configurar Experimento")

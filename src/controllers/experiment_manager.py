@@ -187,29 +187,43 @@ class ExperimentManager:
         """
         db = self.get_db()
         try:
-            if include_details:
-                return db.query(Experiment).order_by(Experiment.created_at.desc()).limit(limit).all()
-            else:
-                # Carrega apenas colunas leves (sem result_details)
-                from sqlalchemy.orm import load_only
-                return db.query(Experiment).options(
-                    load_only(
-                        Experiment.id,
-                        Experiment.created_at,
-                        Experiment.status,
-                        Experiment.config,
-                        Experiment.best_fitness,
-                        Experiment.generations_run,
-                        Experiment.execution_time
-                    )
-                ).order_by(Experiment.created_at.desc()).limit(limit).all()
+            experiments = db.query(Experiment).order_by(Experiment.created_at.desc()).limit(limit).all()
+
+            # Converte para dicionários dentro da sessão para evitar DetachedInstanceError
+            results = []
+            for exp in experiments:
+                exp_dict = {
+                    "id": exp.id,
+                    "created_at": exp.created_at,
+                    "status": exp.status,
+                    "config": exp.config,
+                    "best_fitness": exp.best_fitness,
+                    "generations_run": exp.generations_run,
+                    "execution_time": exp.execution_time,
+                    "result_details": exp.result_details if include_details else None
+                }
+                results.append(exp_dict)
+            return results
         finally:
             db.close()
 
     def get_experiment(self, experiment_id: int):
         db = self.get_db()
         try:
-            return db.query(Experiment).filter(Experiment.id == experiment_id).first()
+            exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+            if exp is None:
+                return None
+            # Converte para dicionário dentro da sessão para evitar DetachedInstanceError
+            return {
+                "id": exp.id,
+                "created_at": exp.created_at,
+                "status": exp.status,
+                "config": exp.config,
+                "best_fitness": exp.best_fitness,
+                "generations_run": exp.generations_run,
+                "execution_time": exp.execution_time,
+                "result_details": exp.result_details
+            }
         finally:
             db.close()
 

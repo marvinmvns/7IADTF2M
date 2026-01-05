@@ -712,10 +712,6 @@ O projeto inclui configuração completa para execução em containers Docker, i
 **Quick Start com Docker:**
 
 ```bash
-# Opção 1: Com GPU NVIDIA
-docker-compose -f docker/docker-compose.yml up -d --build
-
-# Opção 2: Sem GPU (CPU only)
 docker-compose -f docker/docker-compose.cpu.yml up -d --build
 ```
 

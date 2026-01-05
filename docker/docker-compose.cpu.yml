@@ -52,7 +52,8 @@ services:
     networks:
       - ga-vrp-network
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
     labels:
       - "com.fiap.service=web"
