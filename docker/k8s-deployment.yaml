@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saudelog
+  labels:
+    app: saudelog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: saudelog
+  template:
+    metadata:
+      labels:
+        app: saudelog
+    spec:
+      containers:
+      - name: saudelog
+        image: bigfriendpunk/saudelog:latest
+        env:
+        - name: SERVICE_TYPE
+          value: "all"
+        ports:
+        - containerPort: 8000
+          name: api
+        - containerPort: 8501
+          name: streamlit
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: saudelog-service
+spec:
+  type: NodePort
+  selector:
+    app: saudelog
+  ports:
+  - name: api
+    port: 8000
+    targetPort: 8000
+    nodePort: 30080
+  - name: streamlit
+    port: 8501
+    targetPort: 8501
+    nodePort: 30851
