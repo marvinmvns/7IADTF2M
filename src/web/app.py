@@ -213,14 +213,25 @@ def run_pygame_visual(config):
 
 if page == "Dashboard":
     st.title("📊 Dashboard Executivo")
-    
+
     # Métricas Gerais
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     try:
-        exp_response = requests.get(f"{API_URL}/experiments", timeout=5)
+        # Obtém estatísticas globais (TODOS os experimentos, sem limitação)
+        stats_response = requests.get(f"{API_URL}/experiments/statistics", timeout=5)
+        global_stats = stats_response.json()
+        total_experiments = global_stats.get("total", 0)
+
+        # Carrega experimentos para a tabela (até 10000)
+        # IMPORTANTE: include_details=true para carregar result_details (necessário para fitness inicial)
+        exp_response = requests.get(f"{API_URL}/experiments?limit=10000", timeout=15)
         exp_response.raise_for_status()
         experiments = pd.DataFrame(exp_response.json())
+
+        # Mostra aviso se há mais experimentos que o limite
+        if total_experiments > 10000:
+            st.warning(f"⚠️ Exibindo 10.000 de {total_experiments} experimentos na tabela. Considere filtrar por período ou limpar experimentos antigos.")
         
         if not experiments.empty:
             # === PREPARAÇÃO DE DADOS (Moved Up) ===
@@ -236,69 +247,101 @@ if page == "Dashboard":
                 }
                 return mapping.get(ftype, ftype.replace("_", " ").title())
 
+            def get_scenario_label(config):
+                if not isinstance(config, dict): return "❓"
+                scenario = config.get('scenario', 'N/A')
+                # Normaliza para minúsculas
+                scenario_lower = scenario.lower() if isinstance(scenario, str) else 'N/A'
+                mapping = {
+                    "small": "🔹 Small",
+                    "medium": "🔸 Medium",
+                    "large": "🔶 Large",
+                    "critical": "🔴 Critical",
+                    "crítico": "🔴 Critical"  # Suporte a português
+                }
+                return mapping.get(scenario_lower, scenario.capitalize())
+
             experiments['fitness'] = experiments['config'].apply(get_fitness_label)
+            experiments['scenario'] = experiments['config'].apply(get_scenario_label)
 
             # === FILTROS ===
             st.markdown("### 🔍 Filtros")
-            all_types = sorted(experiments['fitness'].unique())
-            selected_types = st.multiselect(
-                "Filtrar por Abordagem/Fitness:",
-                options=all_types,
-                default=all_types
-            )
-            
-            # Aplica Filtro
-            if selected_types:
-                filtered_df = experiments[experiments['fitness'].isin(selected_types)].copy()
-            else:
-                filtered_df = experiments.copy()
 
-            # === MÉTRICAS (Usando dados filtrados) ===
+            # Filtro 1: Abordagem/Fitness
+            filter_col1, filter_col2 = st.columns(2)
+
+            with filter_col1:
+                all_types = sorted(experiments['fitness'].unique())
+                selected_types = st.multiselect(
+                    "Filtrar por Abordagem/Fitness:",
+                    options=all_types,
+                    default=all_types
+                )
+
+            # Filtro 2: Cenário
+            with filter_col2:
+                all_scenarios = sorted(experiments['scenario'].unique())
+                selected_scenarios = st.multiselect(
+                    "Filtrar por Cenário:",
+                    options=all_scenarios,
+                    default=all_scenarios
+                )
+
+            # Aplica Filtros (ambos)
+            filtered_df = experiments.copy()
+
+            if selected_types:
+                filtered_df = filtered_df[filtered_df['fitness'].isin(selected_types)]
+
+            if selected_scenarios:
+                filtered_df = filtered_df[filtered_df['scenario'].isin(selected_scenarios)]
+
+            # === MÉTRICAS (Usando estatísticas GLOBAIS do banco) ===
             st.divider()
-            
-            if not filtered_df.empty:
-                # Filtrar apenas completados para métricas de eficiência
-                completed_df = filtered_df[filtered_df['status'] == 'completed']
-                
-                if not completed_df.empty:
-                    best_fitness = completed_df['best_fitness'].min()
-                    avg_gens = completed_df['generations_run'].mean()
-                else:
-                    best_fitness = 0.0
-                    avg_gens = 0
-                
-                # Total deve refletir o que está na tabela (completados + running + failed)
-                # SE o usuário quiser apenas sucesso, ele deve filtrar. 
-                # PORÉM, o user reclamou que o número estava errado (200).
-                # Vou exibir "Total (Sucesso)" para ser mais claro.
-                total_runs = len(filtered_df)
-                success_runs = len(completed_df)
-                
-                with col1:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Melhor Fitness (Global)</h3>
-                        <h1>{best_fitness:.2f}</h1>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col2:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Execuções (Sucesso / Total)</h3>
-                        <h1>{success_runs} <small>/{total_runs}</small></h1>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col3:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <h3>Média de Gerações</h3>
-                        <h1>{avg_gens:.0f}</h1>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.warning("Nenhum dado encontrado com os filtros selecionados.")
+
+            # Métricas globais (todos os experimentos, sem limitação de paginação)
+            best_fitness_global = global_stats.get('best_fitness', 0.0)
+            completed_global = global_stats.get('completed', 0)
+            total_global = global_stats.get('total', 0)
+            avg_gens_global = global_stats.get('avg_generations', 0.0)
+            avg_initial_fitness = global_stats.get('avg_initial_fitness', 0.0)
+            avg_improvement = global_stats.get('avg_improvement', 0.0)
+
+            with col1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Melhor Fitness (Global)</h3>
+                    <h1>{best_fitness_global:.2f}</h1>
+                    <p style="font-size: 12px; color: #666;">De todos os {total_global} experimentos</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Melhoria Média</h3>
+                    <h1>{avg_improvement:.1f}%</h1>
+                    <p style="font-size: 12px; color: #666;">Inicial: {avg_initial_fitness:.0f} → Final: {global_stats.get('avg_fitness', 0.0):.0f}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col3:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Execuções (Sucesso / Total)</h3>
+                    <h1>{completed_global} <small>/{total_global}</small></h1>
+                    <p style="font-size: 12px; color: #666;">Taxa: {(completed_global/total_global*100) if total_global > 0 else 0:.1f}%</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col4:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Média de Gerações</h3>
+                    <h1>{avg_gens_global:.0f}</h1>
+                    <p style="font-size: 12px; color: #666;">Nos {completed_global} completados</p>
+                </div>
+                """, unsafe_allow_html=True)
 
             st.markdown("### 🕒 Histórico Detalhado")
             
@@ -328,9 +371,12 @@ if page == "Dashboard":
                 except:
                     return 0.0
 
+            # Info sobre total de experimentos
+            st.info(f"📊 Exibindo **{len(filtered_df)}** de **{total_experiments}** experimentos no total")
+
             # Ações de Limpeza e Atualização
             c_clean1, c_clean2, c_refresh, c_spacer = st.columns([1, 1, 1, 3])
-            
+
             with c_refresh:
                 if st.button("🔄 Atualizar"):
                     st.rerun()
@@ -338,24 +384,40 @@ if page == "Dashboard":
             with c_clean1:
                 if st.button("🧹 Limpar Falhas"):
                     try:
-                        requests.delete(f"{API_URL}/experiments/failed")
-                        st.rerun()
-                    except:
-                        st.error("Erro ao limpar falhas.")
+                        response = requests.delete(f"{API_URL}/experiments/failed", timeout=30)
+                        if response.status_code == 200:
+                            st.success("✅ Experimentos problemáticos removidos!")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Erro na API: {response.status_code}")
+                    except requests.exceptions.Timeout:
+                        st.error("⏱️ Timeout: operação demorou demais. Tente novamente.")
+                    except requests.exceptions.ConnectionError:
+                        st.error("🔌 Erro de conexão com a API. Verifique se está rodando.")
+                    except Exception as e:
+                        st.error(f"❌ Erro ao limpar falhas: {str(e)}")
             with c_clean2:
                 if st.button("🗑️ Limpar Tudo", type="primary"):
                     try:
-                        requests.delete(f"{API_URL}/experiments/all")
-                        st.rerun()
-                    except:
-                        st.error("Erro ao limpar tudo.")
+                        response = requests.delete(f"{API_URL}/experiments/all", timeout=30)
+                        if response.status_code == 200:
+                            st.success("✅ Histórico completo removido!")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Erro na API: {response.status_code}")
+                    except requests.exceptions.Timeout:
+                        st.error("⏱️ Timeout: operação demorou demais. Tente novamente.")
+                    except requests.exceptions.ConnectionError:
+                        st.error("🔌 Erro de conexão com a API. Verifique se está rodando.")
+                    except Exception as e:
+                        st.error(f"❌ Erro ao limpar histórico: {str(e)}")
 
             # Aplica calculos no DF filtrado para exibição
             filtered_df['ganho_pct'] = filtered_df.apply(calc_gain, axis=1)
             filtered_df['fitness_inicial'] = filtered_df.apply(get_initial_fitness, axis=1)
-            
-            # Formatando para exibição
-            display_df = filtered_df[['id', 'status', 'created_at', 'fitness', 'fitness_inicial', 'best_fitness', 'ganho_pct', 'execution_time', 'generations_run']].copy()
+
+            # Formatando para exibição - Adiciona 'scenario' após 'created_at'
+            display_df = filtered_df[['id', 'status', 'created_at', 'scenario', 'fitness', 'fitness_inicial', 'best_fitness', 'ganho_pct', 'execution_time', 'generations_run']].copy()
             # Aplica conversão de fuso horário
             display_df['created_at'] = display_df['created_at'].apply(format_date_br)
             # Remove formatting from numerical columns to fix sorting
@@ -364,15 +426,30 @@ if page == "Dashboard":
             
             # Ordenação padrão pelo ganho (decrescente) se não houver ordenação na UI
             # Mas o st.dataframe tem ordenação interativa, então apenas preparamos os dados
-            
+
+            # Aplica estilização condicional: ganho negativo = texto vermelho
+            styled_df = display_df.style.map(
+                lambda val: 'color: red; font-weight: bold' if isinstance(val, (int, float)) and val < 0 else '',
+                subset=['ganho_pct']
+            )
+
             event = st.dataframe(
-                display_df,
+                styled_df,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
                     "id": "ID",
                     "status": "Status",
                     "created_at": "Data (BRT)",
+                    "scenario": st.column_config.TextColumn(
+                        "Cenário",
+                        help="""
+🔹 **Small**: ~10 hospitais (testes rápidos)
+🔸 **Medium**: ~20 hospitais (padrão)
+🔶 **Large**: Todos hospitais (~50+)
+🔴 **Critical**: Apenas entregas críticas/urgentes
+                        """
+                    ),
                     "fitness": st.column_config.TextColumn(
                         "Abordagem/Fitness ℹ️",
                         help="""

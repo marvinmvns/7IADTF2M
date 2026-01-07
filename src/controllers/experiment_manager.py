@@ -7,13 +7,13 @@ from src.genetic_algorithm.crossover import CrossoverMethod
 from src.genetic_algorithm.mutation import MutationMethod
 from src.genetic_algorithm.fitness import FitnessType
 from data.hospitais_sp import (
-    scenario_large, scenario_medium, scenario_small, 
+    scenario_large, scenario_medium, scenario_small,
     scenario_critical_only, get_all_hospitals
 )
 from src.genetic_algorithm.chromosome import DeliveryPoint, Vehicle
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import traceback
 
 
@@ -46,7 +46,7 @@ class ExperimentManager:
             experiment = Experiment(
                 status="pending",
                 config=config_dict,
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             db.add(experiment)
             db.commit()
@@ -178,17 +178,24 @@ class ExperimentManager:
         finally:
             db.close()
 
-    def list_experiments(self, limit=200, include_details=False):
+    def list_experiments(self, limit=1000, offset=0, include_details=False):
         """
-        Lista experimentos. Por padrão não carrega result_details (pesado).
+        Lista experimentos com suporte a paginação.
 
         Args:
-            limit: Número máximo de experimentos
+            limit: Número máximo de experimentos (padrão: 1000)
+            offset: Número de registros a pular para paginação (padrão: 0)
             include_details: Se True, carrega result_details (JSONs grandes)
         """
         db = self.get_db()
         try:
-            experiments = db.query(Experiment).order_by(Experiment.created_at.desc()).limit(limit).all()
+            experiments = (
+                db.query(Experiment)
+                .order_by(Experiment.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
 
             # Converte para dicionários dentro da sessão para evitar DetachedInstanceError
             results = []
@@ -205,6 +212,101 @@ class ExperimentManager:
                 }
                 results.append(exp_dict)
             return results
+        finally:
+            db.close()
+
+    def count_experiments(self, status: str = None):
+        """
+        Conta o total de experimentos, opcionalmente filtrado por status.
+
+        Args:
+            status: Filtrar por status ('completed', 'failed', 'running', 'pending') ou None para todos
+        """
+        db = self.get_db()
+        try:
+            query = db.query(Experiment)
+            if status:
+                query = query.filter(Experiment.status == status)
+            return query.count()
+        finally:
+            db.close()
+
+    def get_statistics(self):
+        """
+        Retorna estatísticas agregadas de TODOS os experimentos no banco.
+
+        Returns:
+            dict com:
+            - total: total de experimentos
+            - completed: experimentos completados
+            - failed: experimentos falhados
+            - running: experimentos em execução
+            - pending: experimentos pendentes
+            - best_fitness: melhor fitness global (menor valor)
+            - avg_fitness: fitness médio final (apenas completados)
+            - avg_initial_fitness: fitness inicial médio
+            - avg_improvement: melhoria percentual média
+            - avg_generations: média de gerações (apenas completados)
+            - avg_execution_time: tempo médio de execução (apenas completados)
+        """
+        db = self.get_db()
+        try:
+            from sqlalchemy import func
+            import json
+
+            # Contadores por status
+            total = db.query(Experiment).count()
+            completed = db.query(Experiment).filter(Experiment.status == 'completed').count()
+            failed = db.query(Experiment).filter(Experiment.status == 'failed').count()
+            running = db.query(Experiment).filter(Experiment.status == 'running').count()
+            pending = db.query(Experiment).filter(Experiment.status == 'pending').count()
+
+            # Estatísticas de experimentos completados
+            completed_query = db.query(Experiment).filter(Experiment.status == 'completed')
+
+            # Melhor fitness global (menor valor)
+            best_fitness = completed_query.with_entities(func.min(Experiment.best_fitness)).scalar()
+
+            # Médias simples (SQL)
+            avg_fitness = completed_query.with_entities(func.avg(Experiment.best_fitness)).scalar()
+            avg_generations = completed_query.with_entities(func.avg(Experiment.generations_run)).scalar()
+            avg_execution_time = completed_query.with_entities(func.avg(Experiment.execution_time)).scalar()
+
+            # Para fitness inicial e melhoria, precisamos processar o JSON
+            completed_experiments = completed_query.all()
+            initial_fitnesses = []
+            improvements = []
+
+            for exp in completed_experiments:
+                if exp.result_details:
+                    try:
+                        details = exp.result_details if isinstance(exp.result_details, dict) else json.loads(exp.result_details)
+                        initial = details.get('initial_fitness', 0)
+                        final = exp.best_fitness
+
+                        if initial and initial > 0:
+                            initial_fitnesses.append(initial)
+                            improvement_pct = ((initial - final) / initial) * 100
+                            improvements.append(improvement_pct)
+                    except:
+                        pass
+
+            avg_initial_fitness = sum(initial_fitnesses) / len(initial_fitnesses) if initial_fitnesses else 0.0
+            avg_improvement = sum(improvements) / len(improvements) if improvements else 0.0
+
+            return {
+                'total': total,
+                'completed': completed,
+                'failed': failed,
+                'running': running,
+                'pending': pending,
+                'best_fitness': float(best_fitness) if best_fitness else 0.0,
+                'avg_fitness': float(avg_fitness) if avg_fitness else 0.0,
+                'avg_initial_fitness': float(avg_initial_fitness),
+                'avg_improvement': float(avg_improvement),
+                'avg_generations': float(avg_generations) if avg_generations else 0.0,
+                'avg_execution_time': float(avg_execution_time) if avg_execution_time else 0.0
+            }
         finally:
             db.close()
 
@@ -282,28 +384,55 @@ class ExperimentManager:
 
     def delete_failed_experiments(self):
         """
-        Remove experimentos falhados ou estagnados (running/pending antigos).
-        Critério 'stale': status='running'/'pending' e created_at > 30 minutos atrás.
+        Remove experimentos problemáticos:
+        1. Status 'failed'
+        2. Status 'running' ou 'pending' há mais de 30 minutos (travados)
+        3. best_fitness é NULL ou NaN (independente do status)
         """
         db = self.get_db()
         try:
-            # 1. Remove Failed
-            deleted_failed = db.query(Experiment).filter(Experiment.status == "failed").delete()
-            
-            # 2. Remove Stale (Running/Pending > 30min)
-            import datetime
-            cutoff_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
-            
+            import math
+
+            # 1. Remove experimentos com status 'failed'
+            deleted_failed = db.query(Experiment).filter(Experiment.status == "failed").delete(synchronize_session=False)
+
+            # 2. Remove experimentos 'running' ou 'pending' há mais de 30 minutos (travados)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=30)
             deleted_stale = db.query(Experiment).filter(
                 Experiment.status.in_(["running", "pending"]),
                 Experiment.created_at < cutoff_time
-            ).delete()
-            
+            ).delete(synchronize_session=False)
+
+            # 3. Remove experimentos com best_fitness NULL ou NaN
+            # SQLite: NULL é detectado com is_(None)
+            experiments_with_null = db.query(Experiment).filter(Experiment.best_fitness.is_(None)).all()
+            deleted_null = 0
+            for exp in experiments_with_null:
+                db.delete(exp)
+                deleted_null += 1
+
+            # 4. Remove experimentos com best_fitness = NaN (representado como string 'NaN' no JSON ou float nan)
+            all_experiments = db.query(Experiment).all()
+            deleted_nan = 0
+            for exp in all_experiments:
+                if exp.best_fitness is not None:
+                    try:
+                        if math.isnan(exp.best_fitness) or math.isinf(exp.best_fitness):
+                            db.delete(exp)
+                            deleted_nan += 1
+                    except (TypeError, ValueError):
+                        # best_fitness não é numérico, ignora
+                        pass
+
             db.commit()
-            print(f"[CLEANUP] Falhados removidos: {deleted_failed} | Estagnados removidos: {deleted_stale}")
+            total_deleted = deleted_failed + deleted_stale + deleted_null + deleted_nan
+            print(f"[CLEANUP] Failed: {deleted_failed} | Stale: {deleted_stale} | NULL: {deleted_null} | NaN/Inf: {deleted_nan} | Total: {total_deleted}")
             return True
+
         except Exception as e:
             print(f"[CLEANUP ERROR] {e}")
+            import traceback
+            traceback.print_exc()
             db.rollback()
             return False
         finally:

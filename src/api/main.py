@@ -408,10 +408,89 @@ async def run_experiment(config: ExperimentConfig, background_tasks: BackgroundT
     - **generations_run**: Gerações executadas
     - **execution_time**: Tempo de execução em segundos
     - **result_details**: Rotas e detalhes da solução
+
+    **Parâmetros de paginação:**
+    - `limit`: Número máximo de experimentos a retornar (padrão: 1000, máx: 10000)
+    - `offset`: Número de registros a pular (padrão: 0)
+    - `include_details`: Incluir result_details no retorno (padrão: True)
+
+    **Nota**: `result_details` contém informações como `initial_fitness`, rotas detalhadas e histórico de gerações.
+    Pode ser grande (~50KB por experimento). Use `include_details=false` para economizar banda se não precisar.
     """
 )
-def list_experiments(limit: int = 200):
-    return manager.list_experiments(limit=limit)
+def list_experiments(limit: int = 1000, offset: int = 0, include_details: bool = True):
+    """
+    Lista experimentos com suporte a paginação.
+
+    Args:
+        limit: Número máximo de registros (padrão 1000, máximo 10000)
+        offset: Registros a pular para paginação (padrão 0)
+        include_details: Incluir result_details (padrão True para compatibilidade)
+    """
+    # Limita o máximo para evitar sobrecarga
+    if limit > 10000:
+        limit = 10000
+    return manager.list_experiments(limit=limit, offset=offset, include_details=include_details)
+
+@app.get(
+    "/experiments/statistics",
+    tags=["experiments"],
+    summary="Obter estatísticas agregadas globais",
+    description="""
+    Retorna estatísticas agregadas de TODOS os experimentos no banco de dados.
+
+    **Não sofre limitação de paginação** - calcula sobre todos os registros.
+
+    **Retorna:**
+    - `total`: Total de experimentos
+    - `completed`: Experimentos completados com sucesso
+    - `failed`: Experimentos que falharam
+    - `running`: Experimentos em execução
+    - `pending`: Experimentos pendentes
+    - `best_fitness`: Melhor fitness global (menor valor entre todos completados)
+    - `avg_fitness`: Fitness médio (apenas experimentos completados)
+    - `avg_generations`: Média de gerações executadas
+    - `avg_execution_time`: Tempo médio de execução em segundos
+
+    **Exemplo de resposta:**
+    ```json
+    {
+      "total": 469,
+      "completed": 465,
+      "failed": 2,
+      "running": 1,
+      "pending": 1,
+      "best_fitness": 128.71,
+      "avg_fitness": 245.32,
+      "avg_generations": 1244.5,
+      "avg_execution_time": 12.34
+    }
+    ```
+    """
+)
+def get_statistics():
+    """Retorna estatísticas agregadas de todos os experimentos."""
+    return manager.get_statistics()
+
+@app.get(
+    "/experiments/count",
+    tags=["experiments"],
+    summary="Contar total de experimentos",
+    description="""
+    Retorna o número total de experimentos no sistema.
+
+    **Parâmetros opcionais:**
+    - `status`: Filtrar por status específico ('completed', 'failed', 'running', 'pending')
+
+    **Exemplo de uso:**
+    - `/experiments/count` - Retorna total de todos os experimentos
+    - `/experiments/count?status=completed` - Retorna total de experimentos completados
+    """
+)
+def count_experiments(status: Optional[str] = None):
+    """Conta experimentos, opcionalmente filtrado por status."""
+    total = manager.count_experiments(status=status)
+    return {"total": total, "status": status if status else "all"}
 
 @app.get(
     "/experiments/latest",
@@ -466,14 +545,23 @@ def delete_all_experiments():
     "/experiments/failed",
     response_model=DeleteResponse,
     tags=["experiments"],
-    summary="Remover experimentos falhados",
-    description="Remove apenas os experimentos com status 'failed', mantendo os demais intactos."
+    summary="Remover experimentos problemáticos",
+    description="""
+    Remove experimentos problemáticos do banco de dados, incluindo:
+
+    1. **Status 'failed'**: Experimentos que falharam durante a execução
+    2. **Travados**: Experimentos com status 'running' ou 'pending' há mais de 30 minutos
+    3. **NULL fitness**: Experimentos com best_fitness NULL (não geraram resultados válidos)
+    4. **NaN/Inf fitness**: Experimentos com valores matemáticos inválidos (NaN ou Infinito)
+
+    Esta operação limpa automaticamente experimentos corrompidos ou que não finalizaram corretamente.
+    """
 )
 def delete_failed_experiments():
     success = manager.delete_failed_experiments()
     if not success:
-        raise HTTPException(status_code=500, detail="Erro ao limpar experimentos falhados")
-    return {"message": "Experimentos falhados removidos"}
+        raise HTTPException(status_code=500, detail="Erro ao limpar experimentos problemáticos")
+    return {"message": "Experimentos problemáticos removidos"}
 
 @app.delete(
     "/experiments/{experiment_id}",
