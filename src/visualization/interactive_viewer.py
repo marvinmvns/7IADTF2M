@@ -163,6 +163,15 @@ FITNESS_LABELS = {
     FitnessType.PRIORITY_AWARE: "Prioridade",
 }
 
+STAGNATION_ENABLED_LABELS = {
+    True: "Ativa",
+    False: "Desativada",
+}
+STAGNATION_ENABLED_OPTIONS = [
+    STAGNATION_ENABLED_LABELS[True],
+    STAGNATION_ENABLED_LABELS[False],
+]
+
 
 class ViewerState(Enum):
     """Estados do visualizador."""
@@ -713,7 +722,8 @@ class InteractiveViewer:
             ("Gerações", "generations", "text", None),
             ("Reposição", "replacement", "dropdown", [REPLACEMENT_LABELS.get(m, m.value) for m in ReplacementStrategy]),
             ("Elites", "elites", "text", None),
-            ("Estagnação", "stagnation", "text", None),
+            ("Estagnação", "stagnation_enabled", "dropdown", STAGNATION_ENABLED_OPTIONS),
+            ("Limite Estagnação", "stagnation", "text", None),
             ("Heurística", "heuristic", "text", None),
         ]
         for index, (label, key, kind, options) in enumerate(ga_fields):
@@ -1465,6 +1475,7 @@ class InteractiveViewer:
                         "fitness_type": get_val(self.ga_config.fitness_type),
                         "elite_size": self.ga_config.elite_size,
                         "tournament_size": self.ga_config.tournament_size,
+                        "stagnation_enabled": self.ga_config.stagnation_enabled,
                         "stagnation_limit": self.ga_config.stagnation_limit,
                         "heuristic_init_ratio": self.ga_config.heuristic_init_ratio,
                         "num_vehicles": self.vehicle_count,
@@ -1632,6 +1643,10 @@ class InteractiveViewer:
             "fitness",
             self._label_for_enum(self.ga_config.fitness_type, FITNESS_LABELS)
         )
+        set_dropdown(
+            "stagnation_enabled",
+            STAGNATION_ENABLED_LABELS[self.ga_config.stagnation_enabled]
+        )
 
     def _update_ui_state(self):
         """Atualiza estado (habilitado/desabilitado) da UI."""
@@ -1647,6 +1662,13 @@ class InteractiveViewer:
                 element.enable()
             else:
                 element.disable()
+        if editable:
+            stagnation_entry = self.ui_elements.get("stagnation")
+            if stagnation_entry is not None:
+                if self.ga_config.stagnation_enabled:
+                    stagnation_entry.enable()
+                else:
+                    stagnation_entry.disable()
         if editable and self.ui_needs_sync:
             focused = self.ui_manager.get_focus_set() if self.ui_manager else None
             focused = focused or []
@@ -2029,6 +2051,8 @@ class InteractiveViewer:
             method = self._enum_from_label(text, FITNESS_LABELS, FitnessType)
             if method is not None:
                 self._set_enum("fitness_type", method)
+        elif ui_element == self.ui_elements.get("stagnation_enabled"):
+            self._set_bool("stagnation_enabled", text == STAGNATION_ENABLED_LABELS[True])
         self.ui_needs_sync = True
 
     def _apply_all_ui_values(self):
@@ -2071,6 +2095,13 @@ class InteractiveViewer:
         if not self._can_edit_config():
             return
         setattr(self.ga_config, attr, round(float(value), precision))
+        self.ui_needs_sync = True
+
+    def _set_bool(self, attr: str, value: bool):
+        """Atualiza parâmetro booleano do AG."""
+        if not self._can_edit_config():
+            return
+        setattr(self.ga_config, attr, bool(value))
         self.ui_needs_sync = True
 
     def _set_enum(self, attr: str, value: Enum):

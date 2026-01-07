@@ -107,7 +107,7 @@ class ExperimentManager:
             # Converte dicionário para GAConfig
             ga_config = GAConfig(
                 population_size=conf.get('population_size', 100),
-                max_generations=conf.get('max_generations', 200),
+                max_generations=conf.get('max_generations', 10000),
                 crossover_rate=conf.get('crossover_rate', 0.9),
                 mutation_rate=conf.get('mutation_rate', 0.15),
                 selection_method=SelectionMethod(conf.get('selection_method', 'tournament')),
@@ -117,7 +117,8 @@ class ExperimentManager:
                 fitness_type=FitnessType(conf.get('fitness_type', 'weighted_multi_objective')),
                 elite_size=conf.get('elite_size', 2),
                 tournament_size=conf.get('tournament_size', 3),
-                stagnation_limit=conf.get('stagnation_limit', 50),
+                stagnation_enabled=conf.get('stagnation_enabled', True),
+                stagnation_limit=conf.get('stagnation_limit', 5000),
                 heuristic_init_ratio=conf.get('heuristic_init_ratio', 0.2),
                 verbose=False
             )

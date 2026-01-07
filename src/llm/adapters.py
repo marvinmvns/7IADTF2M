@@ -184,6 +184,8 @@ Seu objetivo: REDUZIR O FITNESS (menor = melhor) testando COMBINAÇÕES ALGORÍT
    - population_size: 100-300 é bom equilíbrio
    - mutation_rate: 0.1-0.2 para exploração adequada
    - elite_size: 5-10 para problemas médios
+   - stagnation_enabled: true/false para controlar parada por estagnacao
+   - stagnation_limit: default 5000; reduza para execucoes mais rapidas (ignorado se desativado)
 
 🔵 REGRA #4: APRENDIZADO DO HISTÓRICO
    - Se combinação melhorou (✅): explore variações próximas
@@ -196,6 +198,7 @@ Seu objetivo: REDUZIR O FITNESS (menor = melhor) testando COMBINAÇÕES ALGORÍT
 
 Retorne APENAS um JSON válido com os parâmetros que deseja MODIFICAR.
 NÃO inclua explicações, apenas o JSON puro.
+Use true/false (sem aspas) para "stagnation_enabled".
 
 🚨 REGRA CRÍTICA - LEIA COM ATENÇÃO:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -229,7 +232,9 @@ EXEMPLO DE RESPOSTA VÁLIDA (mudando 3 algoritmos):
   "crossover_method": "edge_recombination_crossover",
   "mutation_method": "2-opt",
   "mutation_rate": 0.15,
-  "elite_size": 8
+  "elite_size": 8,
+  "stagnation_enabled": true,
+  "stagnation_limit": 5000
 }}
 ```
 

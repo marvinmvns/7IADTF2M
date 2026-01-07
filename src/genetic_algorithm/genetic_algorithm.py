@@ -53,7 +53,7 @@ class GAConfig:
     population_size: int = 100
     
     # Parâmetros de evolução
-    max_generations: int = 500
+    max_generations: int = 10000
     crossover_rate: float = 0.9
     mutation_rate: float = 0.1
     
@@ -71,7 +71,8 @@ class GAConfig:
     tournament_size: int = 3
     
     # Critérios de parada
-    stagnation_limit: int = 50  # Gerações sem melhoria
+    stagnation_enabled: bool = True  # Para por estagnação
+    stagnation_limit: int = 5000  # Gerações sem melhoria
     target_fitness: Optional[float] = None
     
     # Inicialização
@@ -332,8 +333,9 @@ class GeneticAlgorithm:
             True se deve parar
         """
         # Verifica estagnação
-        if self._stagnation_counter >= self.config.stagnation_limit:
-            return True
+        if self.config.stagnation_enabled and self.config.stagnation_limit > 0:
+            if self._stagnation_counter >= self.config.stagnation_limit:
+                return True
         
         # Verifica fitness alvo
         if (self.config.target_fitness is not None and 

@@ -4,6 +4,17 @@
 
 Sistema completo de otimização de rotas utilizando Algoritmos Genéticos. Implementa arquitetura MVC com API REST, interface web moderna, visualização em tempo real e testes automatizados. O projeto conta com aproximadamente 14.200 linhas de código distribuídas em 30 módulos Python, incluindo 24 operadores genéticos distintos.
 
+Atenção para o pygame, rodar sem o docker ou a versão publicada.
+
+Repositorio: https://github.com/marvinmvns/7IADTF2M
+Conclusão: https://github.com/marvinmvns/7IADTF2M/blob/main/docs/conclusao.md
+Video Youtube explicativo: https://www.youtube.com/watch?v=xBGf2iXm1b4
+Aplicação Publicada e configurada: http://45.33.100.120:30851/
+Dockerhub:https://hub.docker.com/repository/docker/bigfriendpunk/saudelog/general
+
+
+
+
 Atenção a conclusão e as otimizações e resultado encontram-se em 13. [Conclusão](#13-conclusão)
 
 ## 🚀 Instalação Rápida

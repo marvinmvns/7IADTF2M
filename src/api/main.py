@@ -110,7 +110,7 @@ class ExperimentDetail(BaseModel):
                 "id": 42,
                 "created_at": "2024-01-15 14:30:00",
                 "status": "completed",
-                "config": {"population_size": 100, "max_generations": 200},
+                "config": {"population_size": 100, "max_generations": 10000},
                 "best_fitness": 1234.56,
                 "generations_run": 150,
                 "execution_time": 45.2,
@@ -141,11 +141,11 @@ class ExperimentConfig(BaseModel):
         examples=[50, 100, 200]
     )
     max_generations: int = Field(
-        200,
+        10000,
         ge=10,
-        le=1000,
-        description="Número máximo de gerações (10-1000)",
-        examples=[100, 200, 500]
+        le=10000,
+        description="Número máximo de gerações (10-10000)",
+        examples=[200, 1000, 10000]
     )
     crossover_rate: float = Field(
         0.9,
@@ -288,12 +288,16 @@ class ExperimentConfig(BaseModel):
     )
 
     # Critérios de Parada
+    stagnation_enabled: bool = Field(
+        True,
+        description="Habilita parada por estagnação"
+    )
     stagnation_limit: int = Field(
-        50,
-        ge=5,
-        le=200,
-        description="Limite de gerações consecutivas sem melhoria antes de parar (5-200)",
-        examples=[30, 50, 100]
+        5000,
+        ge=1,
+        le=10000,
+        description="Limite de gerações consecutivas sem melhoria antes de parar (1-10000). Ignorado se estagnação estiver desativada",
+        examples=[200, 1000, 5000]
     )
 
     # Configuração de Inicialização
@@ -309,7 +313,7 @@ class ExperimentConfig(BaseModel):
         json_schema_extra = {
             "example": {
                 "population_size": 100,
-                "max_generations": 200,
+                "max_generations": 10000,
                 "crossover_rate": 0.9,
                 "mutation_rate": 0.15,
                 "selection_method": "TOURNAMENT",
@@ -329,7 +333,8 @@ class ExperimentConfig(BaseModel):
                 "w_capacity": 100.0,
                 "w_autonomy": 100.0,
                 "w_window": 50.0,
-                "stagnation_limit": 50,
+                "stagnation_enabled": True,
+                "stagnation_limit": 5000,
                 "heuristic_init_ratio": 0.2
             }
         }
@@ -554,6 +559,7 @@ def get_default_config():
         "w_capacity": default_config.w_capacity,
         "w_autonomy": default_config.w_autonomy,
         "w_window": default_config.w_window,
+        "stagnation_enabled": default_config.stagnation_enabled,
         "stagnation_limit": default_config.stagnation_limit,
         "heuristic_init_ratio": default_config.heuristic_init_ratio
     }

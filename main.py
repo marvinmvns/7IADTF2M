@@ -87,14 +87,15 @@ def run_visualization():
     # Configuração padrão do AG
     config = GAConfig(
         population_size=80,
-        max_generations=300,
+        max_generations=10000,
         crossover_rate=0.9,
         mutation_rate=0.15,
         selection_method=SelectionMethod.TOURNAMENT,
         crossover_method=CrossoverMethod.OX,
         mutation_method=MutationMethod.INVERSION,
         elite_size=2,
-        stagnation_limit=60,
+        stagnation_enabled=True,
+        stagnation_limit=5000,
         heuristic_init_ratio=0.2,
         verbose=False
     )

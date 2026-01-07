@@ -154,7 +154,7 @@ def get_default_config():
     # Fallback para valores hardcoded se API não responder
     return {
         "population_size": 100,
-        "max_generations": 200,
+        "max_generations": 10000,
         "crossover_rate": 0.9,
         "mutation_rate": 0.15,
         "scenario": "large",
@@ -167,7 +167,8 @@ def get_default_config():
         "mutation_method": "inversion",
         "elite_size": 2,
         "tournament_size": 3,
-        "stagnation_limit": 50,
+        "stagnation_enabled": True,
+        "stagnation_limit": 5000,
         "w_distance": 1.0,
         "w_priority": 10.0,
         "w_capacity": 100.0,
@@ -433,7 +434,7 @@ elif page == "Nova Execução":
 
     defaults = {
         "population_size": api_defaults.get("population_size", 100),
-        "max_generations": api_defaults.get("max_generations", 200),
+        "max_generations": api_defaults.get("max_generations", 10000),
         "crossover_rate": api_defaults.get("crossover_rate", 0.9),
         "mutation_rate": api_defaults.get("mutation_rate", 0.15),
         "scenario_name": api_defaults.get("scenario", "large"),
@@ -446,7 +447,8 @@ elif page == "Nova Execução":
         "mutation_method": api_defaults.get("mutation_method", "inversion"),
         "elite_size": api_defaults.get("elite_size", 2),
         "tournament_size": api_defaults.get("tournament_size", 3),
-        "stagnation_limit": api_defaults.get("stagnation_limit", 50),
+        "stagnation_enabled": api_defaults.get("stagnation_enabled", True),
+        "stagnation_limit": api_defaults.get("stagnation_limit", 5000),
         "heuristic_init_ratio": api_defaults.get("heuristic_init_ratio", 0.2),
         "w_distance": api_defaults.get("w_distance", 1.0),
         "w_priority": api_defaults.get("w_priority", 10.0),
@@ -475,6 +477,8 @@ elif page == "Nova Execução":
             defaults["mutation_method"] = lc.get("mutation_method", defaults["mutation_method"])
             defaults["elite_size"] = int(lc.get("elite_size", defaults["elite_size"]))
             defaults["tournament_size"] = int(lc.get("tournament_size", defaults["tournament_size"]))
+            defaults["stagnation_enabled"] = bool(lc.get("stagnation_enabled", defaults["stagnation_enabled"]))
+            defaults["stagnation_limit"] = int(lc.get("stagnation_limit", defaults["stagnation_limit"]))
     except Exception:
         pass # Falha silenciosa, usa defaults da API
 
@@ -490,7 +494,7 @@ elif page == "Nova Execução":
             with c_gen1:
                 pop_size = st.number_input("População", min_value=10, max_value=2000, value=defaults["population_size"])
             with c_gen2:
-                generations = st.number_input("Gerações", min_value=10, max_value=5000, value=defaults["max_generations"])
+                generations = st.number_input("Gerações", min_value=10, max_value=10000, value=defaults["max_generations"])
             with c_gen3:
                 crossover_rate = st.number_input("Taxa Crossover", 0.0, 1.0, defaults["crossover_rate"], step=0.05)
             with c_gen4:
@@ -702,8 +706,20 @@ elif page == "Nova Execução":
             c_div1, c_div2 = st.columns(2)
             with c_div1:
                 heuristic_init = st.slider("Inicialização Heurística (%)", 0.0, 1.0, defaults.get("heuristic_init_ratio", 0.2), help="Proporção da população inicial gerada com heurística (Gulosa) versus Aleatória.")
+                stagnation_enabled = st.checkbox(
+                    "Parar por Estagnação",
+                    value=defaults.get("stagnation_enabled", True),
+                    help="Quando ativo, encerra o experimento após N gerações sem melhoria."
+                )
             with c_div2:
-                stagnation_limit = st.number_input("Limite de Estagnação", 5, 500, defaults.get("stagnation_limit", 50), help="Número de gerações sem melhoria antes de parar")
+                stagnation_limit = st.number_input(
+                    "Limite de Estagnação",
+                    1,
+                    10000,
+                    defaults.get("stagnation_limit", 5000),
+                    help="Número de gerações sem melhoria antes de parar. Ignorado se a estagnação estiver desativada.",
+                    disabled=not stagnation_enabled
+                )
 
         with tab4:
             st.info("Ajuste a importância de cada objetivo na função de fitness.")
@@ -775,6 +791,7 @@ elif page == "Nova Execução":
         "w_capacity": w_cap,
         "w_autonomy": w_auto,
         "w_window": w_wind,
+        "stagnation_enabled": stagnation_enabled,
         "stagnation_limit": stagnation_limit
     }
     
@@ -995,6 +1012,7 @@ elif page == "Análise Detalhada":
                             st.write(f"  - Elitismo: `{cfg.get('elite_size')}`")
                             
                         st.write(f"- Fitness: `{cfg.get('fitness_type')}`")
+                        st.write(f"- Estagnação Ativa: `{'Sim' if cfg.get('stagnation_enabled', True) else 'Não'}`")
                         st.write(f"- Estagnação Limite: `{cfg.get('stagnation_limit')}`")
                         
                         st.markdown("**Pesos / Penalidades**")

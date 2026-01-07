@@ -138,8 +138,8 @@ class GADomains:
         name="max_generations",
         type="int",
         values=None,
-        range=(50, 1000),
-        default=500,
+        range=(50, 10000),
+        default=10000,
         priority=3,
         description="Máximo de gerações. Limite superior de iterações."
     )
@@ -184,12 +184,21 @@ class GADomains:
         description="Tamanho do torneio (para selection_method=tournament)."
     )
 
+    STAGNATION_ENABLED = ParameterDomain(
+        name="stagnation_enabled",
+        type="enum",
+        values=[True, False],
+        default=True,
+        priority=3,
+        description="Ativa/desativa parada por estagnacao. Se False, ignora stagnation_limit."
+    )
+
     STAGNATION_LIMIT = ParameterDomain(
         name="stagnation_limit",
         type="int",
         values=None,
-        range=(20, 200),
-        default=50,
+        range=(1, 10000),
+        default=5000,
         priority=3,
         description="Gerações sem melhoria antes de parar."
     )
@@ -366,6 +375,13 @@ class GADomains:
             if domain.type == "enum":
                 if value in domain.values:
                     validated[key] = value
+                elif all(isinstance(v, bool) for v in domain.values):
+                    if isinstance(value, str):
+                        lowered = value.strip().lower()
+                        if lowered in ("true", "false"):
+                            validated[key] = lowered == "true"
+                    elif isinstance(value, (int, float)) and value in (0, 1):
+                        validated[key] = bool(value)
             elif domain.type == "int":
                 min_val, max_val = domain.range
                 validated[key] = max(min_val, min(max_val, int(value)))
@@ -391,7 +407,10 @@ class GADomains:
                 lines.append(f"\n=== PRIORIDADE {current_priority} - {priority_name.get(current_priority, 'OUTROS')} ===")
 
             if domain.type == "enum":
-                values_str = ", ".join(f'"{v}"' for v in domain.values)
+                if all(isinstance(v, bool) for v in domain.values):
+                    values_str = ", ".join("true" if v else "false" for v in domain.values)
+                else:
+                    values_str = ", ".join(f'"{v}"' for v in domain.values)
                 lines.append(f"- {domain.name}: [{values_str}]")
             else:
                 min_val, max_val = domain.range

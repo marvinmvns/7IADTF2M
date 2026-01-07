@@ -400,6 +400,104 @@ Fitness = Distancia_Total + Penalidade_Atual x (Excesso_Capacidade + Excesso_Aut
 3. **Inversion Mutation** - Mais consistente e eficaz
 4. **Cenario Medium** - Melhor equilibrio custo/beneficio
 
+### Descoberta 1: Otimo Global do Cenario Small
+
+Experimentos com alta estagnacao (2000-3000) e muitas geracoes (6000-10000) confirmaram que **128.714 km e o OTIMO GLOBAL** para o cenario small.
+
+| Evidencia | Resultado |
+|-----------|-----------|
+| Experimentos convergidos | 13 de 16 |
+| Valor exato | 128.714048465748 |
+| Metodos diferentes | 5 selecoes, 5 crossovers, 5 mutacoes |
+| Geracoes variadas | 94 a 4001 |
+
+**Conclusao:** Para cenario small, configuracoes simples (1000 geracoes, estagnacao 50) sao SUFICIENTES. Aumentar parametros NAO melhora o resultado porque ja estamos no otimo.
+
+---
+
+### Descoberta 2: Novo Recorde do Cenario Medium
+
+Experimentos com **6000-8000 geracoes e estagnacao 2000-2500** produziram NOVOS RECORDES para medium distance_only.
+
+| ID | Fitness | Geracoes | Max Gen | Stag | Config | Ganho |
+|----|---------|---------:|--------:|-----:|--------|-------|
+| **449** | **1048.91** | 6001 | 6000 | 2000 | Tournament + Order + 2-opt | **4.9%** |
+| **450** | **1048.96** | 8001 | 8000 | 2500 | Tournament + Order + 3-opt | **4.9%** |
+| 432 | 1054.31 | 301 | 300 | 3000 | (anterior) | 4.4% |
+| 387 | 1054.84 | 195 | 300 | 50 | (anterior) | 4.3% |
+
+**Melhorias vs Baseline:**
+- **ID 449 vs 387:** 1054.84 → 1048.91 = **5.93 km de economia extra**
+- **Percentual de melhoria:** 0.56% melhor que baseline anterior
+- **Eficiencia:** De 4.3% para **4.9%**
+
+**Analise dos Parametros:**
+| Parametro | Impacto |
+|-----------|---------|
+| Geracoes 6000 | Convergencia mais lenta mas melhor |
+| Estagnacao 2000+ | Permite continuar explorando apos plateau |
+| Population 200 | Maior diversidade genetica |
+| Tournament Selection | Melhor pressao seletiva |
+
+**Conclusao:** Para cenario medium, AUMENTAR parametros MELHORA o resultado (até 4.9%). Configuracoes agressivas (6000 gen, 2000 stag) produzem melhores rotas.
+
+---
+
+### Descoberta 3: Comparacao de Fitness Types com Parametros Agressivos
+
+Experimentos com **DIFERENTES TIPOS DE FITNESS** utilizando parametros agressivos (6000 geracoes, 2000+ estagnacao) revelaram trade-offs importantes entre otimizacao de distancia e priorizacao de objetivos complexos.
+
+#### Resultados MEDIUM (Pop 200, Gen 6000, Stag 2000):
+
+| ID | Fitness Type | Valor | Gen | Diff vs Distance_Only | % Pior | Conclusao |
+|----|--------------|-------|-----|----------------------|--------|-----------|
+| 449 | **distance_only** | **1048.91** | 6001 | Baseline | **0%** | Otimo para minimizar km |
+| 472 | **priority_aware** | 1123.50 | 3472 | +74.59 km | +7.1% | Distancia maior, pero prioritiza urgencias |
+| 473 | weighted_multi_objective | 4806.73 | 4189 | N/A | N/A | Otimiza 6 objetivos simultaneamente |
+| 474 | penalty_based | 5092.75 | 2004 | N/A | N/A | Garante viabilidade das restricoes |
+
+#### Resultados LARGE (Pop 250, Gen 6000, Stag 2500):
+
+| ID | Fitness Type | Valor | Gen | Diff vs Distance_Only | % Pior | Conclusao |
+|----|--------------|-------|-----|----------------------|--------|-----------|
+| 454 | **distance_only** | **1892.96** | 2909 | Baseline | **0%** | Otimo para minimizar km |
+| 475 | **priority_aware** | 2058.06 | 2909 | +165.10 km | +8.7% | Distancia maior, pero prioritiza urgencias |
+| 476 | weighted_multi_objective | 43562.19 | 6001 | N/A | N/A | Otimiza 6 objetivos simultaneamente |
+| 477 | penalty_based | 51211.06 | 2502 | N/A | N/A | Garante viabilidade das restricoes |
+
+#### Interpretacao:
+
+1. **distance_only (Baseline):** Melhor para MINIMIZAR quilometros puros
+   - Medium: 1048.91 km
+   - Large: 1892.96 km
+   - Ideal para operacoes focadas exclusivamente em economia de combustivel
+
+2. **priority_aware (Trade-off balanceado):**
+   - Medium: 1123.50 km (7.1% mais km, MAS hospitais urgentes atendidos primeiro)
+   - Large: 2058.06 km (8.7% mais km, MAS hospitais urgentes atendidos primeiro)
+   - **RECOMENDACAO:** Usar quando ha entregas CRITICAS que DEVEM ser prioritarias
+   - Exemplo: Hospital precisa de insulina urgente? priority_aware garante chegada rapida mesmo que aumente km total
+
+3. **weighted_multi_objective (Otimizacao complexa):**
+   - Valores muito altos (4806+ para medium, 43562+ para large)
+   - Nao e comparavel em km direto porque otimiza: distancia + prioridade + capacidade + autonomia + janela de tempo + tempo de espera
+   - **RECOMENDACAO:** Usar quando operacao tem MULTIPLAS RESTRICOES simultaneas
+   - Exemplo: Operador logistico com entregas variadas, diferentes horarios, multiplos veiculos com capacidades diferentes
+
+4. **penalty_based (Garantia de viabilidade):**
+   - Valores muito altos indicam penalidades severas
+   - **RECOMENDACAO:** Usar quando viabilidade das restricoes e CRITICA
+   - Exemplo: Veiculo NAO pode ser sobrecarregado por lei (seguranca), NAO pode rodar sem combustivel (autonomia)
+
+#### Recomendacao Pratica:
+
+Para a maioria dos casos de distribuicao de medicamentos:
+- **Use distance_only** se o foco e apenas ECONOMIA (menor custo)
+- **Use priority_aware** se ha entregas URGENTES que precisam chegar rapido (trade-off: 7-8% mais km para garantir urgencias atendidas)
+- **Use weighted_multi_objective** se a operacao e MUITO COMPLEXA com varios objetivos conflitantes
+- **Use penalty_based** se as RESTRICOES sao INEGOCIAVEIS (seguranca, legalidade)
+
+**Conclusao:** Distance_only produz rotas mais curtas, mas priority_aware e uma escolha melhor quando ha prioridades emergenciais. O custo extra de 7-8% em km e justificado pela melhoria em qualidade de servico.
 
 ### Recomendacoes por Caso de Uso:
 
@@ -470,11 +568,29 @@ Fitness = Distancia_Total + Penalidade_Atual x (Excesso_Capacidade + Excesso_Aut
 
 ### Economia Total Estimada (DISTANCE_ONLY):
 
+#### Baseline Anterior:
+
 | Cenario | Economia/Dia | Economia/Mes | Economia/Ano |
 |---------|--------------|--------------|--------------|
 | Small (10 hospitais) | R$ 24,93 | R$ 548,46 | R$ 6.581,52 |
 | Medium (40 hospitais) | R$ 63,53 | R$ 1.397,66 | R$ 16.771,92 |
 | **Large (80 hospitais)** | **R$ 340,21** | **R$ 7.484,62** | **R$ 89.815,44** |
+
+#### Com NOVO RECORDE Medium (ID 449 - 1048.91):
+
+Extra economizado por reduzir de 1054.84 para 1048.91 km:
+
+| Item | Calculo | Valor/Dia | Valor/Mes | Valor/Ano |
+|------|---------|-----------|-----------|-----------|
+| Km extras | 5.93 km / 10 | R$ 4,16 | R$ 91,52 | R$ 1.098,24 |
+| Horas extras | 5.93 / 40 h | R$ 3,71 | R$ 81,62 | R$ 979,44 |
+| **TOTAL EXTRA** | - | **R$ 7,87** | **R$ 173,14** | **R$ 2.077,68** |
+| **NOVO MEDIUM** | - | **R$ 71,40** | **R$ 1.570,80** | **R$ 18.849,60** |
+
+**Comparacao:**
+- Anterior (1054.84 km): R$ 16.771,92/ano
+- Novo (1048.91 km): **R$ 18.849,60/ano**
+- **Economia adicional: R$ 2.077,68/ano com um unico experimento**
 
 
 
