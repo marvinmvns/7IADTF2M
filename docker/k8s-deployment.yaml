@@ -1,51 +1,130 @@
+# Deployment separado para API FastAPI
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: saudelog
+  name: saudelog-api
   labels:
     app: saudelog
+    component: api
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: saudelog
+      component: api
   template:
     metadata:
       labels:
         app: saudelog
+        component: api
     spec:
       containers:
-      - name: saudelog
+      - name: saudelog-api
         image: bigfriendpunk/saudelog:latest
         env:
         - name: SERVICE_TYPE
-          value: "all"
+          value: "api"
         ports:
         - containerPort: 8000
           name: api
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "100m"
+          limits:
+            memory: "768Mi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+# Deployment separado para Streamlit Web Interface
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saudelog-web
+  labels:
+    app: saudelog
+    component: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: saudelog
+      component: web
+  template:
+    metadata:
+      labels:
+        app: saudelog
+        component: web
+    spec:
+      containers:
+      - name: saudelog-web
+        image: bigfriendpunk/saudelog:latest
+        env:
+        - name: SERVICE_TYPE
+          value: "web"
+        - name: API_URL
+          value: "http://saudelog-api-service:8000"
+        ports:
         - containerPort: 8501
           name: streamlit
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
             memory: "512Mi"
-            cpu: "500m"
+            cpu: "100m"
+          limits:
+            memory: "768Mi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 10
+          periodSeconds: 5
 ---
+# Service para API
 apiVersion: v1
 kind: Service
 metadata:
-  name: saudelog-service
+  name: saudelog-api-service
 spec:
   type: NodePort
   selector:
     app: saudelog
+    component: api
   ports:
   - name: api
     port: 8000
     targetPort: 8000
     nodePort: 30080
+---
+# Service para Streamlit
+apiVersion: v1
+kind: Service
+metadata:
+  name: saudelog-web-service
+spec:
+  type: NodePort
+  selector:
+    app: saudelog
+    component: web
+  ports:
   - name: streamlit
     port: 8501
     targetPort: 8501

@@ -9,7 +9,7 @@ Atenção para o pygame, rodar sem o docker ou a versão publicada.
 Repositorio: https://github.com/marvinmvns/7IADTF2M
 Conclusão: https://github.com/marvinmvns/7IADTF2M/blob/main/docs/conclusao.md
 Video Youtube explicativo: https://www.youtube.com/watch?v=xBGf2iXm1b4
-Aplicação Publicada e configurada: http://45.33.100.120:30851/
+Aplicação Publicada e configurada: http://23.239.17.238:30851/ (nesse cenário são duas pods a da API e do Streamlit)
 Dockerhub:https://hub.docker.com/repository/docker/bigfriendpunk/saudelog/general
 
 
